@@ -1,0 +1,3593 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Opłacalności — Sklep Pokémon GO (PokéCoins)</title>
+
+<!-- Meta tagi dla PWA / A2HS (Add to Home Screen) -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PoGo Cal">
+<meta name="theme-color" content="#0f1420">
+
+<!-- Dynamiczny Manifest PWA -->
+<script>
+  (function() {
+    const manifest = {
+      name: "Kalkulator Pokémon GO",
+      short_name: "PoGo Cal",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#0f1420",
+      theme_color: "#0f1420",
+      icons: [{
+        src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCBmaWxsPSIjZmZjYjJiIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjE1Ii8+PHRleHQgeD0iNTAiIHk9IjYwIiBmb250LXNpemU9IjYwIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzBmMTQyMCI+QTwvdGV4dD48L3N2Zz4=",
+        sizes: "192x192 512x512",
+        type: "image/svg+xml"
+      }]
+    };
+    const stringManifest = JSON.stringify(manifest);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.head.appendChild(link);
+  })();
+</script>
+
+<style>
+  :root{
+    --bg:#0f1420;
+    --panel:#161d2e;
+    --panel-alt:#1d2740;
+    --line:#2a3550;
+    --ink:#eef1f8;
+    --muted:#8b96b0;
+    --pika:#ffcb2b;
+    --pika-dark:#e8a600;
+    --electric:#5b9bff;
+    --win:#4fd18a;
+    --lose:#ff6b6b;
+    --mono: 'Consolas', 'SFMono-Regular', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 0%, #1a2340 0%, transparent 45%),
+      radial-gradient(circle at 90% 10%, #1c1430 0%, transparent 40%),
+      var(--bg);
+    color:var(--ink);
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  @media (max-width:520px){
+    body{padding:16px 10px 60px;}
+    header{margin-bottom:18px;}
+    .card{padding:14px;border-radius:12px;}
+    table{font-size:12px;}
+    thead th{padding:0 4px 6px; font-size:9px;}
+    tbody td{padding:8px 4px;}
+    .letter{width:22px;height:22px;font-size:11px;}
+    .item-cell{gap:6px;}
+    .item-cell div:last-child{font-size:12px; line-height:1.2;}
+    input[type=number].qty{width:44px; padding:4px 5px; font-size:12px;}
+    .ref-price{font-size:10px; line-height:1.5;}
+    .paid-row{flex-direction:column; align-items:flex-start; gap:10px;}
+    .paid-input input{width:100%;}
+    .stat{font-size:12px;}
+    .verdict .WL{font-size:28px;}
+  }
+  header{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .eyebrow{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--pika);
+    background:rgba(255,203,43,.08);
+    border:1px solid rgba(255,203,43,.3);
+    padding:4px 10px;
+    border-radius:20px;
+    margin-bottom:14px;
+  }
+  h1{
+    font-size:clamp(26px,4.5vw,40px);
+    margin:0 0 8px;
+    letter-spacing:.5px;
+  }
+  h1 span{color:var(--pika);}
+  header p{color:var(--muted); margin:0; font-size:14px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap:20px;
+  }
+  @media (max-width:720px){ .grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+  }
+  .card h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    color:var(--muted);
+    margin:0 0 16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2::before{
+    content:"";
+    width:6px;height:6px;border-radius:50%;
+    background:var(--pika);
+    display:inline-block;
+  }
+
+  .table-scroll{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  table{width:100%; border-collapse:collapse; min-width:460px;}
+  thead th{
+    text-align:left;
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    padding:0 8px 8px;
+    font-weight:600;
+  }
+  tbody tr{border-top:1px solid var(--line);}
+  tbody td{padding:10px 8px; font-size:14px; vertical-align:middle;}
+  tbody tr:hover{background:var(--panel-alt);}
+
+  .item-cell{display:flex; align-items:center; gap:10px;}
+  .letter{
+    width:26px;height:26px;
+    border-radius:7px;
+    background:var(--panel-alt);
+    border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono); font-size:12px; color:var(--pika);
+    flex-shrink:0;
+  }
+  input[type=checkbox]{
+    width:18px;height:18px;
+    accent-color:var(--pika-dark);
+    cursor:pointer;
+  }
+  input[type=number]{
+    width:64px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:6px;
+    padding:5px 7px;
+    font-size:13px;
+    font-family:var(--mono);
+  }
+  input[type=number]:focus{outline:1px solid var(--electric);}
+  .ref-price{font-family:var(--mono); color:var(--muted); font-size:12px;}
+  .ref-price b{color:var(--electric); font-weight:600;}
+
+  /* Right column: summary panel */
+  .paid-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel-alt);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .paid-row label{font-size:13px; color:var(--muted);}
+  .paid-input{
+    display:flex; align-items:center; gap:8px;
+    font-family:var(--mono);
+  }
+  .paid-input span{color:var(--pika); font-weight:700; font-size:13px;}
+  .paid-input input{
+    width:120px; font-size:16px; padding:7px 9px;
+    background:var(--bg); border:1px solid var(--line);
+    color:var(--ink); border-radius:6px;
+  }
+
+  .stat{
+    display:flex; justify-content:space-between;
+    padding:8px 0;
+    border-top:1px dashed var(--line);
+    font-size:13px;
+  }
+  .stat:first-of-type{border-top:none;}
+  .stat .k{color:var(--muted);}
+  .stat .v{font-family:var(--mono); font-weight:600;}
+
+  .verdict{
+    margin-top:18px;
+    border-radius:12px;
+    padding:22px 18px;
+    text-align:center;
+    border:1px solid var(--line);
+    transition:all .25s ease;
+  }
+  .verdict .WL{
+    font-family:var(--mono);
+    font-size:34px;
+    font-weight:700;
+    margin:0;
+  }
+  .verdict.win{
+    background:rgba(79,209,138,.08);
+    border-color:rgba(79,209,138,.3);
+  }
+  .verdict.win .WL{color:var(--win);}
+  .verdict.lose{
+    background:rgba(255,107,107,.08);
+    border-color:rgba(255,107,107,.3);
+  }
+  .verdict.lose .WL{color:var(--lose);}
+  .verdict.neutral .WL{color:var(--muted);}
+  .verdict.warn{
+    background:rgba(255,203,43,.08);
+    border-color:rgba(255,203,43,.3);
+  }
+  .verdict.warn .WL{color:var(--pika);}
+
+  .simres-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel-alt);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 14px;
+    margin-bottom:8px;
+    font-size:13px;
+  }
+  .simres-row .name{font-weight:600;}
+  .simres-row .meta{color:var(--muted); font-size:12px; margin-top:2px;}
+  .simres-row .score{font-family:var(--mono); color:var(--electric); font-weight:700; white-space:nowrap;}
+  .simres-row.unknown .score{color:var(--muted);}
+  .verdict .msg{
+    font-size:13px;
+    margin-top:8px;
+    color:var(--ink);
+  }
+
+  .breakdown-card{display:none; margin-top:20px;}
+  .breakdown-card h3{font-size:12px; color:var(--muted); margin:0 0 12px; text-transform:uppercase; letter-spacing:.1em;}
+  .breakdown-list{display:flex; flex-direction:column; gap:10px;}
+  .bd-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    background:var(--panel-alt);
+    border-radius:8px;
+    border:1px solid var(--line);
+  }
+  .bd-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:1;
+  }
+  .bd-left .letter{width:20px;height:20px;font-size:10px;}
+  .bd-left div{font-size:13px;}
+  .bd-qty{color:var(--muted); font-size:11px;}
+  .bd-right{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:3px;
+  }
+  .bd-right .per{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--electric);
+    font-weight:600;
+  }
+  .bd-right .tot{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--muted);
+  }
+
+  /* Navigation — poziomy, przewijalny "suwak" zamiast łamania się na kilka linii */
+  .nav-buttons{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:28px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+    padding:2px 2px 8px;
+  }
+  .nav-buttons::-webkit-scrollbar{display:none;}
+  .nav-btn{
+    flex:0 0 auto;
+    white-space:nowrap;
+    scroll-snap-align:start;
+    padding:10px 20px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--muted);
+    border-radius:8px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    transition:all .25s ease;
+  }
+  @media (max-width:720px){
+    .nav-buttons{ justify-content:flex-start; }
+    .nav-btn{ padding:9px 16px; font-size:12px; }
+  }
+  .nav-btn:hover{background:var(--panel-alt); color:var(--ink);}
+  .nav-btn.active{background:var(--pika); color:var(--bg);}
+
+  /* Pages */
+  .page{display:none;}
+  .page.active{display:block;}
+
+  /* Calendar & Raids */
+  .event-row{
+    display:flex;
+    gap:16px;
+    padding:14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:12px;
+    background:var(--panel-alt);
+  }
+  .event-date{
+    flex-shrink:0;
+    font-weight:600;
+    color:var(--pika);
+    font-size:12px;
+    font-family:var(--mono);
+    min-width:100px;
+  }
+  .event-info b{
+    display:block;
+    font-size:14px;
+    margin-bottom:4px;
+    color:var(--ink);
+  }
+  .event-info .desc{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .tag{
+    display:inline-block;
+    font-size:9px;
+    padding:3px 7px;
+    border-radius:12px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-left:8px;
+    font-weight:600;
+  }
+  .tag.community{background:rgba(91,155,255,.2); color:var(--electric);}
+  .tag.ultra{background:rgba(255,203,43,.2); color:var(--pika);}
+  .tag.raidday{background:rgba(255,107,107,.2); color:var(--lose);}
+
+  .raid-week{
+    display:flex;
+    gap:12px;
+    padding:12px;
+    background:var(--panel-alt);
+    border:1px solid var(--line);
+    border-radius:10px;
+    margin-bottom:8px;
+  }
+  .rng{
+    flex-shrink:0;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--muted);
+    min-width:80px;
+    padding-top:2px;
+  }
+  .boss{
+    flex:1;
+    font-size:14px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .iv-badge{
+    display:inline-block;
+    background:var(--win);
+    color:var(--bg);
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:10px;
+    font-weight:700;
+    margin-left:6px;
+    font-family:var(--mono);
+  }
+  .cp-line{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--electric);
+    font-weight:400;
+    margin-top:4px;
+  }
+  .cp-line b{color:var(--pika);}
+  .cp-note{
+    font-size:10px;
+    color:var(--muted);
+    margin-top:2px;
+    font-style:italic;
+  }
+
+  /* Type effectiveness table */
+  .type-chart-table{font-size:10px; min-width:900px;}
+  .type-chart-table th, .type-chart-table td{
+    padding:3px; text-align:center; border:1px solid var(--line);
+  }
+  .type-chart-table th{
+    background:var(--panel-alt); color:var(--ink); font-size:9px;
+    writing-mode:vertical-rl; text-orientation:mixed; padding:4px 2px;
+  }
+  .type-chart-table td.row-label{
+    background:var(--panel-alt); text-align:left; padding:3px 6px;
+    color:var(--ink); font-weight:600; writing-mode:horizontal-tb;
+  }
+  .tc-se{background:rgba(79,209,138,.35); color:var(--win); font-weight:700;}
+  .tc-nve{background:rgba(255,107,107,.18); color:var(--lose);}
+  .tc-imm{background:rgba(139,150,176,.25); color:var(--muted); font-weight:700;}
+  .tc-neu{color:var(--muted);}
+
+  /* Counters selector */
+  .type-select-row{
+    display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .type-select-row select{
+    flex:1; min-width:140px;
+    background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:9px 10px; font-size:14px;
+  }
+  .counters-btn{
+    padding:10px 18px; background:var(--pika); color:var(--bg);
+    border:none; border-radius:8px; font-weight:700; cursor:pointer;
+    font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+  }
+  .counters-btn:hover{background:var(--pika-dark);}
+  .counter-chips{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;
+  }
+  .counter-chip{
+    padding:8px 12px; border-radius:8px; font-size:13px; font-weight:700;
+    font-family:var(--mono); border:1px solid var(--line);
+  }
+  .counter-chip.x4{background:rgba(79,209,138,.25); color:var(--win); border-color:var(--win);}
+  .counter-chip.x2{background:rgba(91,155,255,.18); color:var(--electric); border-color:var(--electric);}
+  .counters-empty{color:var(--muted); font-size:13px;}
+
+  #page-super select{min-width:260px;}
+  .super-types-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0 16px;}
+  .own-type-chip{
+    padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600;
+    background:rgba(255,203,43,.14); color:var(--pika); border:1px solid rgba(255,203,43,.4);
+  }
+
+  /* Admin Panel */
+  .admin-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:12px;
+  }
+  .admin-tab{
+    padding:8px 12px;
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:12px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    border-bottom:2px solid transparent;
+    transition:all .2s ease;
+  }
+  .admin-tab:hover{color:var(--ink);}
+  .admin-tab.active{
+    color:var(--pika);
+    border-bottom-color:var(--pika);
+  }
+  .admin-content{display:none;}
+  .admin-content.active{display:block;}
+  .super-main-content{display:none;}
+  .super-main-content.active{display:block;}
+  .log-entry{
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--panel-alt);
+    margin-bottom:8px;
+    font-size:12px;
+  }
+  .log-time{
+    font-family:var(--mono);
+    color:var(--pika);
+    font-weight:600;
+    display:block;
+    margin-bottom:4px;
+  }
+  .log-user{
+    color:var(--electric);
+    font-weight:600;
+  }
+  .log-action{
+    color:var(--ink);
+  }
+  .log-device{
+    color:var(--muted);
+    font-size:11px;
+    margin-top:4px;
+  }
+  .clear-logs-btn{
+    padding:8px 14px;
+    background:var(--lose);
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:600;
+    margin-top:12px;
+  }
+  .clear-logs-btn:hover{background:#ff5252;}
+
+  .backup-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+  .backup-btn{
+    padding:10px 18px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid var(--line);
+    transition:all .2s ease;
+  }
+  .backup-btn.primary{background:var(--pika); color:var(--bg); border-color:var(--pika);}
+  .backup-btn.primary:hover{background:var(--pika-dark);}
+  .backup-btn.secondary{background:var(--panel-alt); color:var(--ink);}
+  .backup-btn.secondary:hover{border-color:var(--electric); color:var(--electric);}
+  .backup-summary{
+    margin-top:14px; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--line); background:var(--bg);
+    font-size:13px; color:var(--muted); line-height:1.6; white-space:pre-line;
+  }
+  .backup-summary.ok{border-color:var(--win); color:var(--ink);}
+  .backup-summary.warn{border-color:var(--lose); color:var(--ink);}
+
+  .stats-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:12px;
+    margin-top:12px;
+  }
+  .stats-item{
+    padding:12px;
+    background:var(--panel-alt);
+    border:1px solid var(--line);
+    border-radius:8px;
+    text-align:center;
+  }
+  .stats-item .label{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:6px;
+  }
+  .stats-item .value{
+    font-size:20px;
+    font-weight:700;
+    color:var(--pika);
+    font-family:var(--mono);
+  }
+
+  /* Styl PWA Banner / Powiadomienia o pobraniu skrótu */
+  .pwa-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(150%);
+    width: calc(100% - 32px);
+    max-width: 500px;
+    background: var(--panel);
+    border: 1px solid var(--pika);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .pwa-banner.show {
+    transform: translateX(-50%) translateY(0);
+  }
+  .pwa-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pwa-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--pika);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-weight: bold;
+    color: var(--bg);
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .pwa-text {
+    flex: 1;
+  }
+  .pwa-text b {
+    display: block;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .pwa-text p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pwa-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .pwa-btn {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .pwa-btn-primary {
+    background: var(--pika);
+    color: var(--bg);
+  }
+  .pwa-btn-primary:hover {
+    background: var(--pika-dark);
+  }
+  .pwa-btn-secondary {
+    background: var(--panel-alt);
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  /* Profil / logowanie */
+  .profil-badge{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:8px 14px; margin-bottom:16px;
+    font-size:13px; color:var(--muted);
+  }
+  .profil-badge .name{color:var(--ink); font-weight:700;}
+  .profil-badge .avatar{
+    width:28px; height:28px; border-radius:50%;
+    background:var(--pika); color:var(--bg); font-weight:800;
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+  }
+  .profil-badge .logout-mini{
+    margin-left:auto; background:none; border:1px solid var(--line);
+    color:var(--muted); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer;
+  }
+  .profil-badge .logout-mini:hover{color:var(--lose); border-color:var(--lose);}
+
+  .auth-tabs{display:flex; gap:8px; margin-bottom:18px;}
+  .auth-tab{
+    flex:1; padding:10px; background:var(--panel-alt); border:1px solid var(--line);
+    border-radius:8px; color:var(--muted); font-weight:700; font-size:13px;
+    cursor:pointer; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .auth-tab.active{background:var(--pika); color:var(--bg); border-color:var(--pika);}
+
+  .auth-form{max-width:360px;}
+  .auth-field{margin-bottom:14px;}
+  .auth-field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .auth-field input[type=text], .auth-field input[type=password]{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:10px 12px; font-size:14px; box-sizing:border-box;
+  }
+  .auth-field input:focus{outline:1px solid var(--electric);}
+  .auth-submit{
+    width:100%; padding:11px; background:var(--pika); color:var(--bg);
+    border:none; border-radius:8px; font-weight:700; cursor:pointer;
+    font-size:13px; text-transform:uppercase; letter-spacing:.06em; margin-top:4px;
+  }
+  .auth-submit:hover{background:var(--pika-dark);}
+  .auth-error{color:var(--lose); font-size:13px; margin:0 0 12px;}
+  .auth-hint{color:var(--muted); font-size:12px; margin-top:14px; line-height:1.5;}
+
+  .profil-view .profil-header{
+    display:flex; align-items:center; gap:16px; margin-bottom:22px;
+  }
+  .profil-view .avatar-big{
+    width:56px; height:56px; border-radius:50%;
+    background:var(--pika); color:var(--bg); font-weight:800; font-size:22px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .profil-view .profil-name{font-size:19px; font-weight:800; color:var(--ink);}
+  .profil-view .profil-meta{font-size:12px; color:var(--muted); margin-top:2px;}
+  .profil-stats{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:22px;}
+  .profil-stats .stats-item{
+    background:var(--panel-alt); border:1px solid var(--line); border-radius:10px; padding:14px;
+  }
+  .profil-stats .label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;}
+  .profil-stats .value{font-size:20px; font-weight:800; color:var(--ink); margin-top:4px;}
+  .profil-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .profil-actions button{
+    padding:9px 16px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel-alt); color:var(--ink);
+  }
+  .profil-actions .danger{background:var(--lose); color:white; border-color:var(--lose);}
+  .profil-actions button:hover{filter:brightness(1.1);}
+
+  /* Ekwipunek petów */
+  .eq-locked{
+    text-align:center; padding:40px 20px; color:var(--muted);
+  }
+  .eq-locked button{
+    margin-top:14px; padding:10px 20px; background:var(--pika); color:var(--bg);
+    border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px;
+  }
+  .eq-form-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;
+  }
+  @media (max-width:520px){ .eq-form-grid{grid-template-columns:1fr;} }
+  .eq-field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .eq-field input[type=text], .eq-field input[type=number], .eq-field select{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:9px 10px; font-size:14px; box-sizing:border-box;
+  }
+  .eq-field input:focus, .eq-field select:focus{outline:1px solid var(--electric);}
+  .eq-iv-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .eq-level-auto{
+    background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; font-size:13px; color:var(--muted); line-height:1.5;
+  }
+  .eq-level-auto b{color:var(--ink);}
+  .eq-level-auto.ok{border-color:var(--win); color:var(--ink);}
+  .eq-level-auto.warn{border-color:var(--lose); color:var(--ink);}
+  .eq-level-auto .eq-level-chip{
+    display:inline-block; margin:6px 6px 0 0; padding:4px 10px; border-radius:20px;
+    border:1px solid var(--line); background:var(--panel-alt); cursor:pointer; font-family:var(--mono); font-size:12px;
+  }
+  .eq-level-auto .eq-level-chip.active{border-color:var(--pika); color:var(--pika);}
+  .eq-submit{
+    padding:10px 20px; background:var(--pika); color:var(--bg); border:none; border-radius:8px;
+    font-weight:700; cursor:pointer; font-size:13px; text-transform:uppercase; letter-spacing:.05em;
+  }
+  .eq-submit:hover{background:var(--pika-dark);}
+  .eq-cancel-btn{
+    padding:10px 20px; background:none; color:var(--muted); border:1px solid var(--line); border-radius:8px;
+    font-weight:700; cursor:pointer; font-size:13px;
+  }
+  .eq-list{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:14px; margin-top:20px;
+  }
+  .eq-card{
+    background:var(--panel-alt); border:1px solid var(--line); border-radius:12px; padding:14px;
+  }
+  .eq-card .eq-card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .eq-card .eq-name{font-weight:800; font-size:15px; color:var(--ink);}
+  .eq-card .eq-form-tag{
+    font-size:10px; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+    padding:3px 8px; border-radius:10px; background:rgba(255,203,43,.14); color:var(--pika);
+    border:1px solid rgba(255,203,43,.4); white-space:nowrap;
+  }
+  .eq-card .eq-cp{color:var(--electric); font-weight:700; font-size:13px; margin-top:4px;}
+  .eq-card .eq-lvl{color:var(--muted); font-size:12px;}
+  .eq-card .eq-iv{
+    display:flex; gap:10px; margin-top:10px; font-size:11px; color:var(--muted);
+  }
+  .eq-card .eq-iv b{color:var(--ink); display:block; font-size:13px;}
+  .eq-card .eq-moves{margin-top:10px; font-size:12px; color:var(--muted); line-height:1.5;}
+  .eq-card .eq-moves b{color:var(--ink);}
+  .eq-card .eq-note{margin-top:8px; font-size:12px; color:var(--muted); font-style:italic;}
+  .eq-card-actions{display:flex; gap:8px; margin-top:12px;}
+  .eq-card-actions button{
+    flex:1; padding:7px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;
+    border:1px solid var(--line); background:var(--bg); color:var(--ink);
+  }
+  .eq-card-actions .eq-del{color:var(--lose); border-color:var(--lose);}
+  .eq-empty{color:var(--muted); font-size:13px; text-align:center; padding:30px 0;}
+  .eq-toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:10px;}
+  .eq-sync-status{
+    display:inline-block; margin-top:8px; padding:4px 10px; border-radius:20px;
+    font-size:11px; font-family:var(--mono); border:1px solid var(--line); background:var(--panel-alt);
+  }
+  .eq-sync-status.eq-sync-online{border-color:var(--win); color:var(--win);}
+  .eq-sync-status.eq-sync-connecting{border-color:var(--electric); color:var(--electric);}
+  .eq-sync-status.eq-sync-offline{border-color:var(--lose); color:var(--lose);}
+  .eq-count{color:var(--muted); font-size:12px;}
+
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- Header -->
+  <header>
+    <div class="eyebrow">POKÉMON GO</div>
+    <h1>Kalkulator <span>Opłacalności</span></h1>
+    <p>Sprawdź czy pakiet PokéCoins wart jest swojej ceny</p>
+  </header>
+
+  <!-- Navigation -->
+  <div class="nav-buttons">
+    <button class="nav-btn active" id="btnCalc" onclick="showPage('calc')">Kalkulator</button>
+    <button class="nav-btn" id="btnCal" onclick="showPage('cal')">Eventy & Raidy</button>
+    <button class="nav-btn" id="btnSuper" onclick="showPage('super')">Superefektywność</button>
+    <button class="nav-btn" id="btnProfil" onclick="showPage('profil')">Profil</button>
+    <button class="nav-btn" id="btnEq" onclick="showPage('eq')">Ekwipunek</button>
+    <button class="nav-btn" id="btnAdm" onclick="showPage('adm')">Administracja</button>
+  </div>
+
+  <!-- Badge zalogowanego użytkownika (widoczny na każdej stronie) -->
+  <div id="profilBadge" class="profil-badge" style="display:none;">
+    <div class="avatar" id="profilBadgeAvatar"></div>
+    <div>Zalogowano jako <span class="name" id="profilBadgeName"></span></div>
+    <button class="logout-mini" onclick="logoutProfile()">Wyloguj</button>
+  </div>
+
+  <!-- PAGE: Kalkulator -->
+  <div id="page-calc" class="page active">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>Pakiety do porównania</h2>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>✓</th>
+                  <th>Przedmiot</th>
+                  <th>Ilość</th>
+                  <th>Referencja ceny (coins)</th>
+                </tr>
+              </thead>
+              <tbody id="itemTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Podsumowanie</h2>
+          <div class="paid-row">
+            <label>Cena oferty (PokéCoins):</label>
+            <div class="paid-input">
+              <span>₽</span>
+              <input type="number" id="paidCoins" placeholder="0" value="0">
+            </div>
+          </div>
+
+          <div class="stat">
+            <span class="k">Zaznaczonych przedmiotów:</span>
+            <span class="v" id="totalCoinsShown">0</span>
+          </div>
+          <div class="stat">
+            <span class="k">Wartość bazowa:</span>
+            <span class="v" id="baseVal">— coins</span>
+          </div>
+          <div class="stat">
+            <span class="k">Wartość standardu rynku:</span>
+            <span class="v" id="stdVal">— coins</span>
+          </div>
+          <div class="stat">
+            <span class="k">Najniższa dostępna:</span>
+            <span class="v" id="lowVal">— coins</span>
+          </div>
+
+          <div class="verdict neutral" id="verdictBox">
+            <div class="WL" id="verdictWL">—</div>
+            <div class="msg" id="verdictMsg">Zaznacz przedmioty, podaj ilość i cenę oferty w PokéCoins.</div>
+          </div>
+
+          <div class="breakdown-card" id="breakdownCard">
+            <h3>Rozbicie ceny</h3>
+            <div class="breakdown-list" id="breakdownList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Calendar & Raids -->
+  <div id="page-cal" class="page">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>Nadchodzące eventy</h2>
+          <div id="eventList"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>5★ Raidy — Rozkład 100% IV</h2>
+          <div id="raid5List"></div>
+          <h2 style="margin-top:24px;">Mega Raidy — 100% IV</h2>
+          <div id="raidMegaList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h2>Kontry na Pokémona (wybierz do 2 typów)</h2>
+      <div class="type-select-row">
+        <select id="typeSelect1"></select>
+        <select id="typeSelect2"></select>
+        <button class="counters-btn" onclick="showCounters()">Pokaż kontry</button>
+      </div>
+      <div id="countersResult">
+        <p class="counters-empty">Wybierz typ (lub dwa typy) Pokémona, żeby zobaczyć jakie typy ataków są przeciwko niemu super efektywne.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h2>Tabela skuteczności typów</h2>
+      <p style="color:var(--muted); font-size:12px; margin-top:-8px;">Wiersz = typ atakującego, kolumna = typ broniącego się. <span style="color:var(--win);">S</span> = super efektywny (2×), <span style="color:var(--lose);">N</span> = nieefektywny (0,5×), <span style="color:var(--muted);">0</span> = brak efektu.</p>
+      <div class="table-scroll">
+        <table class="type-chart-table" id="typeChartTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Superefektywność -->
+  <div id="page-super" class="page">
+    <div class="card">
+      <h2>Superefektywność — kontry na konkretnego Pokémona</h2>
+      <p style="color:var(--muted); font-size:12px; margin-top:-8px;">Wybierz kategorię i podkategorię, a potem Pokémona z listy, żeby zobaczyć jego typ(y) oraz jakie typy ataków są na niego super efektywne.</p>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" id="superMainBtnAktualne" onclick="showSuperMainTab('aktualne')">Aktualne</button>
+        <button class="admin-tab" id="superMainBtnOgolne" onclick="showSuperMainTab('ogolne')">Ogólne</button>
+      </div>
+
+      <!-- MAIN: Aktualne -->
+      <div id="superMain-aktualne" class="super-main-content active">
+        <div class="admin-tabs" style="margin-top:10px;">
+          <button class="admin-tab active" id="superSubBtnAktualneZwykle" onclick="showSuperSubTab('aktualne','zwykle')">Zwykłe Raidy</button>
+          <button class="admin-tab" id="superSubBtnAktualneMega" onclick="showSuperSubTab('aktualne','mega')">Mega Raidy</button>
+        </div>
+        <div id="superSub-aktualne-zwykle" class="admin-content active">
+          <div class="type-select-row">
+            <select id="superSelect-aktualne-zwykle" onchange="showSuperEffective('aktualne','zwykle')"></select>
+          </div>
+          <div id="superResult-aktualne-zwykle">
+            <p class="counters-empty">Wybierz Pokémona z listy powyżej, żeby zobaczyć jego typy i kontry.</p>
+          </div>
+        </div>
+        <div id="superSub-aktualne-mega" class="admin-content">
+          <div class="type-select-row">
+            <select id="superSelect-aktualne-mega" onchange="showSuperEffective('aktualne','mega')"></select>
+          </div>
+          <div id="superResult-aktualne-mega">
+            <p class="counters-empty">Wybierz Pokémona z listy powyżej, żeby zobaczyć jego typy i kontry.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN: Ogólne -->
+      <div id="superMain-ogolne" class="super-main-content">
+        <div class="admin-tabs" style="margin-top:10px;">
+          <button class="admin-tab active" id="superSubBtnOgolneZwykle" onclick="showSuperSubTab('ogolne','zwykle')">Zwykłe Raidy</button>
+          <button class="admin-tab" id="superSubBtnOgolneMega" onclick="showSuperSubTab('ogolne','mega')">Mega Raidy</button>
+        </div>
+        <div id="superSub-ogolne-zwykle" class="admin-content active">
+          <div class="type-select-row">
+            <select id="superSelect-ogolne-zwykle" onchange="showSuperEffective('ogolne','zwykle')"></select>
+          </div>
+          <div id="superResult-ogolne-zwykle">
+            <p class="counters-empty">Wybierz Pokémona z listy powyżej, żeby zobaczyć jego typy i kontry.</p>
+          </div>
+        </div>
+        <div id="superSub-ogolne-mega" class="admin-content">
+          <div class="type-select-row">
+            <select id="superSelect-ogolne-mega" onchange="showSuperEffective('ogolne','mega')"></select>
+          </div>
+          <div id="superResult-ogolne-mega">
+            <p class="counters-empty">Wybierz Pokémona z listy powyżej, żeby zobaczyć jego typy i kontry.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Profil -->
+  <div id="page-profil" class="page">
+    <div class="card">
+
+      <!-- Widok: niezalogowany (logowanie / rejestracja) -->
+      <div id="authView">
+        <h2>Profil</h2>
+        <p style="color:var(--muted); font-size:12px; margin-top:-8px; margin-bottom:18px;">Załóż lokalny profil, żeby personalizować aplikację. Dane logowania zapisywane są wyłącznie w tej przeglądarce (localStorage) — to nie jest prawdziwe konto z serwerem, więc nie używaj haseł, których używasz gdzie indziej.</p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="authTabLogin" onclick="showAuthTab('login')">Logowanie</button>
+          <button class="auth-tab" id="authTabRegister" onclick="showAuthTab('register')">Rejestracja</button>
+        </div>
+
+        <!-- Formularz logowania -->
+        <div id="authForm-login" class="auth-form">
+          <p class="auth-error" id="loginError" style="display:none;"></p>
+          <div class="auth-field">
+            <label for="loginUsername">Nazwa użytkownika</label>
+            <input type="text" id="loginUsername" autocomplete="username" placeholder="np. AshKetchum">
+          </div>
+          <div class="auth-field">
+            <label for="loginPassword">Hasło</label>
+            <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <button class="auth-submit" onclick="loginProfile()">Zaloguj się</button>
+        </div>
+
+        <!-- Formularz rejestracji -->
+        <div id="authForm-register" class="auth-form" style="display:none;">
+          <p class="auth-error" id="registerError" style="display:none;"></p>
+          <div class="auth-field">
+            <label for="registerUsername">Nazwa użytkownika</label>
+            <input type="text" id="registerUsername" autocomplete="username" placeholder="np. AshKetchum">
+          </div>
+          <div class="auth-field">
+            <label for="registerPassword">Hasło</label>
+            <input type="password" id="registerPassword" autocomplete="new-password" placeholder="min. 4 znaki">
+          </div>
+          <div class="auth-field">
+            <label for="registerPassword2">Powtórz hasło</label>
+            <input type="password" id="registerPassword2" autocomplete="new-password" placeholder="••••••••">
+          </div>
+          <button class="auth-submit" onclick="registerProfile()">Utwórz profil</button>
+        </div>
+
+        <p class="auth-hint">Profil pozwala m.in. podpisywać Twoją aktywność w panelu administracyjnym Twoją nazwą użytkownika oraz zapamiętać Twoje ustawienia na tym urządzeniu.</p>
+      </div>
+
+      <!-- Widok: zalogowany -->
+      <div id="profilView" class="profil-view" style="display:none;">
+        <div class="profil-header">
+          <div class="avatar-big" id="profilViewAvatar"></div>
+          <div>
+            <div class="profil-name" id="profilViewName"></div>
+            <div class="profil-meta" id="profilViewMeta"></div>
+          </div>
+        </div>
+
+        <div class="profil-stats">
+          <div class="stats-item">
+            <div class="label">Konto założone</div>
+            <div class="value" id="profilStatCreated" style="font-size:14px;">—</div>
+          </div>
+          <div class="stats-item">
+            <div class="label">Ostatnie logowanie</div>
+            <div class="value" id="profilStatLastLogin" style="font-size:14px;">—</div>
+          </div>
+        </div>
+
+        <div class="profil-actions">
+          <button onclick="showPage('adm')">Zobacz moją aktywność</button>
+          <button class="danger" onclick="logoutProfile()">Wyloguj się</button>
+          <button class="danger" onclick="deleteProfile()">Usuń profil</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PAGE: Ekwipunek -->
+  <div id="page-eq" class="page">
+    <div class="card">
+
+      <!-- Widok: niezalogowany -->
+      <div id="eqLocked" class="eq-locked" style="display:none;">
+        <h2 style="margin-bottom:6px;">Ekwipunek</h2>
+        <p>Ekwipunek jest przypisany do konta — zaloguj się lub załóż profil, żeby dodawać Pokémony.</p>
+        <button onclick="showPage('profil')">Przejdź do Profilu</button>
+      </div>
+
+      <!-- Widok: zalogowany -->
+      <div id="eqUnlocked" style="display:none;">
+        <div class="eq-toolbar">
+          <h2 style="margin:0;">Ekwipunek — <span id="eqOwnerName"></span></h2>
+          <button class="eq-submit" id="eqAddToggleBtn" onclick="openEqAddForm()">+ Dodaj Pokémona</button>
+        </div>
+        <div id="eqSyncStatus" class="eq-sync-status" style="display:none;"></div>
+        <p style="color:var(--muted); font-size:12px; margin-top:2px;">Ekwipunek pod tą samą nazwą użytkownika synchronizuje się między urządzeniami, gdy skonfigurowana jest baza online.</p>
+
+        <!-- Formularz dodawania/edycji -->
+        <div id="eqForm" style="display:none; margin-top:18px; padding-top:18px; border-top:1px solid var(--line);">
+          <input type="hidden" id="eqEditId" value="">
+          <div class="eq-form-grid">
+            <div class="eq-field">
+              <label for="eqName">Nazwa Pokémona</label>
+              <input type="text" id="eqName" list="eqPokemonDatalist" placeholder="np. Mewtwo" oninput="onEqNameChange()" autocomplete="off">
+              <datalist id="eqPokemonDatalist"></datalist>
+              <div id="eqNameHint" style="font-size:11px; color:var(--muted); margin-top:4px;"></div>
+            </div>
+            <div class="eq-field">
+              <label for="eqFormSelect">Forma</label>
+              <select id="eqFormSelect" onchange="recalcEqLevel()">
+                <option value="normal">Zwykła</option>
+                <option value="mega">Mega</option>
+                <option value="shadow">Shadow</option>
+                <option value="purified">Purified</option>
+              </select>
+            </div>
+            <div class="eq-field">
+              <label for="eqCP">CP</label>
+              <input type="number" id="eqCP" min="0" placeholder="np. 4551" oninput="recalcEqLevel()">
+            </div>
+          </div>
+
+          <div class="eq-field" style="margin-bottom:14px;">
+            <label>IV (0–15)</label>
+            <div class="eq-iv-row">
+              <input type="number" id="eqIvAtk" min="0" max="15" placeholder="Atak" oninput="recalcEqLevel()">
+              <input type="number" id="eqIvDef" min="0" max="15" placeholder="Obrona" oninput="recalcEqLevel()">
+              <input type="number" id="eqIvSta" min="0" max="15" placeholder="Wytrzymałość" oninput="recalcEqLevel()">
+            </div>
+          </div>
+
+          <!-- Poziom i HP: wyliczane automatycznie z CP oraz IV (dla rozpoznanych gatunków) -->
+          <div class="eq-field" style="margin-bottom:14px;">
+            <label>Poziom i HP</label>
+            <input type="hidden" id="eqLevel" value="20">
+            <input type="hidden" id="eqHP" value="">
+            <div id="eqLevelAuto" class="eq-level-auto">
+              Podaj CP oraz IV rozpoznanego Pokémona, żeby wyliczyć poziom automatycznie.
+            </div>
+            <div id="eqLevelManualWrap" style="display:none; margin-top:8px;">
+              <select id="eqLevelManual" onchange="onEqLevelManualChange()"></select>
+            </div>
+          </div>
+
+          <div class="eq-form-grid">
+            <div class="eq-field">
+              <label for="eqFastMove">Szybki atak</label>
+              <input type="text" id="eqFastMove" placeholder="np. Confusion">
+              <select id="eqFastMoveSelect" style="display:none;" onchange="document.getElementById('eqFastMove').value=this.value"></select>
+            </div>
+            <div class="eq-field">
+              <label for="eqChargeMove">Mocny atak (opcjonalnie: 2.)</label>
+              <input type="text" id="eqChargeMove" placeholder="np. Psystrike">
+              <select id="eqChargeMoveSelect" style="display:none;" onchange="document.getElementById('eqChargeMove').value=this.value"></select>
+            </div>
+          </div>
+          <div class="eq-field" style="margin-bottom:14px;">
+            <input type="text" id="eqChargeMove2" placeholder="Drugi mocny atak (opcjonalnie)">
+            <select id="eqChargeMove2Select" style="display:none; margin-top:8px;" onchange="document.getElementById('eqChargeMove2').value=(this.value==='— brak —'?'':this.value)"></select>
+          </div>
+
+          <div class="eq-field" style="margin-bottom:16px;">
+            <label for="eqNote">Notatka (opcjonalnie)</label>
+            <input type="text" id="eqNote" placeholder="np. main na raidy Mewtwo">
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button class="eq-submit" onclick="saveEqPokemon()">Zapisz</button>
+            <button class="eq-cancel-btn" onclick="toggleEqForm(false)">Anuluj</button>
+          </div>
+        </div>
+
+        <div class="eq-count" id="eqCount" style="margin-top:16px;"></div>
+        <div id="eqList" class="eq-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PAGE: Admin Panel -->
+  <div id="page-adm" class="page">
+    <div class="card">
+      <h2>Panel Administracyjny</h2>
+      
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="showAdminTab('access')">Logi Dostępu</button>
+        <button class="admin-tab" onclick="showAdminTab('activity')">Aktywność Użytkowników</button>
+        <button class="admin-tab" onclick="showAdminTab('stats')">Statystyki</button>
+        <button class="admin-tab" onclick="showAdminTab('backup')">Kopia Zapasowa</button>
+        <button class="admin-tab" onclick="showAdminTab('players')">Ekwipunki Graczy</button>
+        <button class="admin-tab" onclick="showAdminTab('raidsim')">Symulator Raidów</button>
+      </div>
+
+      <!-- Tab 1: Access Logs -->
+      <div id="tab-access" class="admin-content active">
+        <h3 style="color: var(--muted); font-size:12px; margin-top:0;">Logowanie wszystkich wejść na stronę</h3>
+        <div id="accessLogsList"></div>
+        <button class="clear-logs-btn" onclick="clearLogs('access')">Wyczyść logi dostępu</button>
+      </div>
+
+      <!-- Tab 2: User Activity -->
+      <div id="tab-activity" class="admin-content">
+        <h3 style="color: var(--muted); font-size:12px; margin-top:0;">Śledzenie aktywności użytkowników na stronie</h3>
+        <div id="activityLogsList"></div>
+        <button class="clear-logs-btn" onclick="clearLogs('activity')">Wyczyść logi aktywności</button>
+      </div>
+
+      <!-- Tab 3: Statistics -->
+      <div id="tab-stats" class="admin-content">
+        <h3 style="color: var(--muted); font-size:12px; margin-top:0;">Zestawienie statystyk użytkowników</h3>
+        <div class="stats-grid">
+          <div class="stats-item">
+            <div class="label">Łączne wejścia</div>
+            <div class="value" id="statTotalVisits">0</div>
+          </div>
+          <div class="stats-item">
+            <div class="label">Dzisiaj</div>
+            <div class="value" id="statTodayVisits">0</div>
+          </div>
+          <div class="stats-item">
+            <div class="label">Unikalnych użytkowników</div>
+            <div class="value" id="statUniqueUsers">0</div>
+          </div>
+          <div class="stats-item">
+            <div class="label">Średnia sesja</div>
+            <div class="value" id="statAvgSession">0m</div>
+          </div>
+        </div>
+        <button class="clear-logs-btn" onclick="clearAllLogs()" style="background:var(--lose); margin-top:24px;">Wyczyść WSZYSTKIE dane</button>
+      </div>
+
+      <!-- Tab 4: Backup / Restore ekwipunku -->
+      <div id="tab-backup" class="admin-content">
+        <h3 style="color: var(--muted); font-size:12px; margin-top:0;">Kopia zapasowa ekwipunku (wszyscy użytkownicy)</h3>
+        <p style="color:var(--muted); font-size:13px; line-height:1.6; margin-top:0;">
+          Jeśli aplikacja jest połączona z bazą online (Firestore), ekwipunek każdego profilu jest tam
+          zapisywany na bieżąco, a ta przeglądarka trzyma tylko lokalną kopię offline. Jeśli baza online
+          nie jest skonfigurowana, ekwipunek istnieje wyłącznie w tej przeglądarce — wyczyszczenie danych,
+          zmiana urządzenia albo przypadkowe usunięcie Pokémona bezpowrotnie go kasuje. Niezależnie od trybu,
+          warto regularnie pobierać plik z kopią zapasową i trzymać go w bezpiecznym miejscu (dysk, chmura) —
+          w razie problemu wgraj go z powrotem, żeby przywrócić ekwipunki wszystkich zarejestrowanych profili
+          (dane trafią zarówno do bazy online, jeśli jest dostępna, jak i lokalnie).
+        </p>
+        <div class="backup-source-status" id="backupSourceStatus" style="font-family:var(--mono); font-size:12px; margin-bottom:14px;"></div>
+        <div class="backup-actions">
+          <button class="backup-btn primary" onclick="exportEqBackup()">⬇ Pobierz kopię zapasową (.json)</button>
+          <button class="backup-btn secondary" onclick="document.getElementById('backupFileInput').click()">⬆ Wgraj kopię zapasową (lokalnie + na serwer)</button>
+          <input type="file" id="backupFileInput" accept="application/json,.json" style="display:none;" onchange="importEqBackup(event)">
+        </div>
+        <div id="backupResult" class="backup-summary" style="display:none;"></div>
+      </div>
+
+      <!-- Tab 5: Podgląd ekwipunków zarejestrowanych graczy -->
+      <div id="tab-players" class="admin-content">
+        <h3 style="color: var(--muted); font-size:12px; margin-top:0;">Podgląd ekwipunku dowolnego zarejestrowanego profilu</h3>
+        <p style="color:var(--muted); font-size:13px; line-height:1.6; margin-top:0;">
+          Wybierz profil z listy, żeby zobaczyć jego Pokémony (tryb tylko do odczytu — bez możliwości edycji czy usuwania).
+        </p>
+        <div class="eq-field" style="max-width:320px; margin-bottom:16px;">
+          <label for="adminEqUserSelect" style="display:block; font-size:12px; color:var(--muted); margin-bottom:6px;">Zarejestrowany profil</label>
+          <select id="adminEqUserSelect" onchange="renderAdminPlayerEq()">
+            <option value="">— wybierz gracza —</option>
+          </select>
+        </div>
+        <div class="backup-actions" style="margin-bottom:16px;">
+          <button class="backup-btn secondary" style="border-color:var(--lose); color:var(--lose);" onclick="deleteUserAccountAdmin()">🗑 Usuń to konto</button>
+        </div>
+        <div class="eq-count" id="adminEqCount"></div>
+        <div id="adminEqList" class="eq-list"></div>
+      </div>
+
+      <!-- Tab 6: Symulator Raidów — czy gracz da radę zbić danego bossa -->
+      <div id="tab-raidsim" class="admin-content">
+        <h3 style="color: var(--muted); font-size:12px; margin-top:0;">Sprawdź, czy ekwipunek gracza poradzi sobie z raidem</h3>
+        <p style="color:var(--muted); font-size:13px; line-height:1.6; margin-top:0;">
+          Wybierz aktualnego bossa raidowego, gracza oraz styl walki. Aplikacja liczy siłę
+          <b>tego jednego konta</b> (na podstawie CP jego Pokémonów i przewagi typów nad bossem) i porównuje
+          ją z tym, ile realnie trzeba, żeby zbić bossa w limicie czasu — zgodnie z tym, że większość
+          legendarnych 5★/Mega raidów wymaga grupy kilku trenerów, a nie jednej osoby. Dlatego wynikiem jest
+          głównie <b>szacowana liczba trenerów tej klasy</b>, potrzebna do ubicia bossa, a nie proste "tak/nie".
+          To orientacyjne wyliczenie (bez dokładnych staty ataku/obrony, HP bossa, konkretnych ruchów czy
+          umiejętności gracza) — traktuj je jako wskazówkę, a nie pewnik.
+        </p>
+
+        <div class="eq-form-grid">
+          <div class="eq-field">
+            <label for="simBossSelect">Boss raidowy</label>
+            <select id="simBossSelect">
+              <option value="">— wybierz bossa —</option>
+            </select>
+          </div>
+          <div class="eq-field">
+            <label for="simUserSelect">Gracz</label>
+            <select id="simUserSelect">
+              <option value="">— wybierz gracza —</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="eq-field" style="margin-bottom:16px;">
+          <label style="display:block; margin-bottom:8px;">Styl walki</label>
+          <div class="admin-tabs" style="margin-top:0;">
+            <button type="button" class="admin-tab active" id="simModeBtnTeam" onclick="setSimMode('team')">Drużyna (6 Pokémonów)</button>
+            <button type="button" class="admin-tab" id="simModeBtnSolo" onclick="setSimMode('solo')">1 Pokémon (ciągłe odradzanie)</button>
+          </div>
+          <p style="color:var(--muted); font-size:12px; margin:8px 0 0;" id="simModeDesc">
+            Do walki wchodzi 6 najlepszych Pokémonów gracza — liczy się ich uśredniona siła przeciwko bossowi.
+          </p>
+        </div>
+
+        <button class="eq-submit" onclick="simulateRaidChallenge()">Sprawdź szanse</button>
+
+        <div id="simResult" style="margin-top:20px; display:none;">
+          <div id="simBossInfo" style="margin-bottom:14px;"></div>
+          <div id="simPokemonList"></div>
+          <div id="simVerdict" class="verdict neutral">
+            <p class="WL" id="simVerdictText">—</p>
+            <p class="msg" id="simVerdictMsg"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Powiadomienie PWA o instalacji skrótu -->
+<div id="pwaBanner" class="pwa-banner">
+  <div class="pwa-header">
+    <div class="pwa-icon">A</div>
+    <div class="pwa-text">
+      <b>Dodaj do ekranu głównego</b>
+      <p id="pwaBannerDesc">Pobierz skrót na pulpit telefonu, aby mieć szybki dostęp jak do aplikacji.</p>
+    </div>
+  </div>
+  <div class="pwa-actions">
+    <button class="pwa-btn pwa-btn-secondary" onclick="dismissPwaPrompt()">Nie teraz</button>
+    <button id="pwaInstallBtn" class="pwa-btn pwa-btn-primary" onclick="installPwa()">Pobierz</button>
+  </div>
+</div>
+
+<!-- ================== FIREBASE (baza online dla ekwipunku) ==================
+     1) Wejdź na https://console.firebase.google.com → "Dodaj projekt" (nazwa dowolna, np. "pogo-cal").
+     2) W projekcie: "Kompilacja" → "Firestore Database" → "Utwórz bazę danych" → tryb testowy (na start wystarczy).
+     3) "Reguły" w Firestore ustaw np. tak (na start; patrz uwaga o bezpieczeństwie w opisie od Claude'a):
+          rules_version = '2';
+          service cloud.firestore {
+            match /databases/{database}/documents {
+              match /inventories/{userId} { allow read, write: if true; }
+            }
+          }
+     4) Wróć do "Przegląd projektu" → ikonka "</>" (Dodaj aplikację internetową) → zarejestruj appkę.
+     5) Skopiuj obiekt firebaseConfig, który tam dostaniesz, i wklej go PONIŻEJ zamiast danych przykładowych. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // ⬇⬇⬇ WKLEJ TUTAJ SWÓJ WŁASNY firebaseConfig z konsoli Firebase ⬇⬇⬇
+  const firebaseConfig = {
+    apiKey: "WSTAW_SWOJ_API_KEY",
+    authDomain: "TWOJ-PROJEKT.firebaseapp.com",
+    projectId: "TWOJ-PROJEKT",
+    storageBucket: "TWOJ-PROJEKT.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:xxxxxxxxxxxxxxxxxxxxxx"
+  };
+  // ⬆⬆⬆ bez tego ekwipunek będzie działał wyłącznie lokalnie (offline), jak dotychczas ⬆⬆⬆
+
+  let firebaseReady = false;
+  let db = null;
+  try{
+    if(firebaseConfig.apiKey && firebaseConfig.apiKey !== 'WSTAW_SWOJ_API_KEY'){
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firebaseReady = true;
+    }
+  } catch(err){
+    console.error('Firebase init error:', err);
+    firebaseReady = false;
+  }
+</script>
+
+<script>
+/* Ikony */
+const ICON_A = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCBmaWxsPSIjZmZjYjJiIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjE1Ii8+PHRleHQgeD0iNTAiIHk9IjYwIiBmb250LXNpemU9IjYwIiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzBmMTQyMCI+QTwvdGV4dD48L3N2Zz4=';
+
+/* Dane przedmiotów */
+const ITEMS = [
+  {id:'A', name:'Premium Battle Pass', base:100, std:75.5, low:57},
+  {id:'B', name:'Remote Raid Pass', base:195, std:175, low:155},
+  {id:'C', name:'Super Incubator', base:200, std:125, low:95},
+  {id:'D', name:'Egg Incubator', base:150, std:105, low:75},
+  {id:'E', name:'Lucky Egg', base:80, std:62.5, low:40},
+  {id:'F', name:'Star Piece', base:100, std:62.5, low:45},
+  {id:'G', name:'Poffin', base:100, std:75, low:50},
+  {id:'H', name:'Incense', base:40, std:31.25, low:20},
+  {id:'I', name:'Lure Module', base:100, std:85, low:55},
+  {id:'J', name:'Max Particle Pack', base:150, std:135, low:105},
+  {id:'K', name:'Max Mushroom', base:400, std:333, low:250},
+  {id:'L', name:'Link Charges', base:100, std:80, low:60},
+];
+
+const tbody = document.getElementById('itemTable');
+ITEMS.forEach((it, idx) => {
+  const tr = document.createElement('tr');
+  const iconHtml = it.id === 'A'
+    ? `<div class="letter" style="background:transparent;border:none;padding:0;"><img src="${ICON_A}" alt="Premium Battle Pass" style="width:26px;height:26px;object-fit:contain;"></div>`
+    : `<div class="letter">${it.id}</div>`;
+  tr.innerHTML = `
+    <td><input type="checkbox" data-idx="${idx}" class="chk"></td>
+    <td>
+      <div class="item-cell">
+        ${iconHtml}
+        <div>${it.name}</div>
+      </div>
+    </td>
+    <td><input type="number" min="0" value="1" data-idx="${idx}" class="qty"></td>
+    <td class="ref-price">bazowa: <b>${it.base}</b> · std: <b>${it.std}</b> · rotacja: <b>${it.low}</b> coins</td>
+  `;
+  tbody.appendChild(tr);
+});
+
+function calc(){
+  let low=0, std=0, base=0, coins=0;
+  document.querySelectorAll('.chk').forEach(chk=>{
+    const idx = chk.dataset.idx;
+    const qty = parseFloat(document.querySelector(`.qty[data-idx="${idx}"]`).value) || 0;
+    if(chk.checked && qty>0){
+      const it = ITEMS[idx];
+      low  += it.low  * qty;
+      std  += it.std  * qty;
+      base += it.base * qty;
+      coins+= (it.base) * qty;
+    }
+  });
+
+  const selectedCount = document.querySelectorAll('.chk:checked').length;
+  document.getElementById('totalCoinsShown').textContent = selectedCount;
+  document.getElementById('lowVal').textContent  = Math.round(low)+' coins';
+  document.getElementById('stdVal').textContent  = Math.round(std)+' coins';
+  document.getElementById('baseVal').textContent = Math.round(base)+' coins';
+
+  const paid = parseFloat(document.getElementById('paidCoins').value);
+  const box = document.getElementById('verdictBox');
+  const wl = document.getElementById('verdictWL');
+  const msg = document.getElementById('verdictMsg');
+
+  if(!paid || paid<=0 || coins===0){
+    box.className = 'verdict neutral';
+    wl.textContent = '—';
+    msg.textContent = 'Zaznacz przedmioty, podaj ilość i cenę oferty w PokéCoins.';
+    document.getElementById('breakdownCard').style.display = 'none';
+    return;
+  }
+
+  const diff = std - paid;
+  const diffPct = (diff/std)*100;
+
+  box.className = 'verdict ' + (diff >= 0 ? 'win' : 'lose');
+  wl.textContent = diff >= 0 ? 'W' : 'L';
+
+  if(diff >= 0){
+    msg.textContent = `Opłacalne! Oszczędzasz ok. ${Math.round(diff)} coins (${diffPct.toFixed(0)}%) względem typowej oferty rynkowej.`;
+  } else {
+    msg.textContent = `Nieopłacalne — płacisz o ${Math.round(Math.abs(diff))} coins (${Math.abs(diffPct).toFixed(0)}%) więcej niż wynosi typowa cena rynkowa.`;
+  }
+
+  const breakdownCard = document.getElementById('breakdownCard');
+  const breakdownList = document.getElementById('breakdownList');
+  breakdownList.innerHTML = '';
+
+  document.querySelectorAll('.chk').forEach(chk=>{
+    const idx = chk.dataset.idx;
+    const qty = parseFloat(document.querySelector(`.qty[data-idx="${idx}"]`).value) || 0;
+    if(chk.checked && qty>0){
+      const it = ITEMS[idx];
+      const itemStd = it.std * qty;
+      const share = itemStd / std;
+      const itemPaid = paid * share;
+      const perUnit = itemPaid / qty;
+
+      const row = document.createElement('div');
+      row.className = 'bd-row';
+      const iconHtml = it.id === 'A'
+        ? `<img src="${ICON_A}" alt="" style="width:22px;height:22px;object-fit:contain;">`
+        : `<div class="letter">${it.id}</div>`;
+      row.innerHTML = `
+        <div class="bd-left">
+          ${iconHtml}
+          <div>${it.name} <span class="bd-qty">× ${qty}</span></div>
+        </div>
+        <div class="bd-right">
+          <span class="per">${perUnit.toFixed(1)} coins/szt.</span>
+          <span class="tot">${Math.round(itemPaid)} coins razem</span>
+        </div>
+      `;
+      breakdownList.appendChild(row);
+    }
+  });
+
+  breakdownCard.style.display = 'block';
+}
+
+document.addEventListener('input', calc);
+calc();
+
+/* Przełącznik widoków */
+function showPage(name){
+  document.getElementById('page-calc').classList.toggle('active', name==='calc');
+  document.getElementById('page-cal').classList.toggle('active', name==='cal');
+  document.getElementById('page-super').classList.toggle('active', name==='super');
+  document.getElementById('page-profil').classList.toggle('active', name==='profil');
+  document.getElementById('page-eq').classList.toggle('active', name==='eq');
+  document.getElementById('page-adm').classList.toggle('active', name==='adm');
+  document.getElementById('btnCalc').classList.toggle('active', name==='calc');
+  document.getElementById('btnCal').classList.toggle('active', name==='cal');
+  document.getElementById('btnSuper').classList.toggle('active', name==='super');
+  document.getElementById('btnProfil').classList.toggle('active', name==='profil');
+  document.getElementById('btnEq').classList.toggle('active', name==='eq');
+  document.getElementById('btnAdm').classList.toggle('active', name==='adm');
+  const activeBtn = document.querySelector('.nav-btn.active');
+  if(activeBtn) activeBtn.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+  if(name === 'profil') renderProfilState();
+  if(name === 'eq') renderEqPage();
+  if(name === 'adm' && document.getElementById('tab-players').classList.contains('active')) populateAdminEqUserSelect();
+}
+
+function showAdminTab(tabName){
+  document.querySelectorAll('.admin-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tabName).classList.add('active');
+  event.target.classList.add('active');
+  updateStats();
+  if(tabName === 'players'){
+    populateAdminEqUserSelect();
+  }
+  if(tabName === 'backup'){
+    updateBackupSourceStatus();
+  }
+  if(tabName === 'raidsim'){
+    populateSimBossSelect();
+    populateSimUserSelect();
+  }
+}
+
+/* ========== SYSTEM PROFILU / LOGOWANIA (lokalnie, w przeglądarce) ========== */
+
+function getProfiles(){
+  return JSON.parse(localStorage.getItem('profiles') || '[]');
+}
+function saveProfiles(profiles){
+  localStorage.setItem('profiles', JSON.stringify(profiles));
+}
+function getCurrentUsername(){
+  return localStorage.getItem('currentUser') || null;
+}
+function initials(name){
+  return (name || '?').trim().slice(0,2).toUpperCase();
+}
+
+function showAuthTab(which){
+  document.getElementById('authTabLogin').classList.toggle('active', which==='login');
+  document.getElementById('authTabRegister').classList.toggle('active', which==='register');
+  document.getElementById('authForm-login').style.display = which==='login' ? 'block' : 'none';
+  document.getElementById('authForm-register').style.display = which==='register' ? 'block' : 'none';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('registerError').style.display = 'none';
+}
+
+function registerProfile(){
+  const username = document.getElementById('registerUsername').value.trim();
+  const pass1 = document.getElementById('registerPassword').value;
+  const pass2 = document.getElementById('registerPassword2').value;
+  const errEl = document.getElementById('registerError');
+
+  if(!username || username.length < 2){
+    return showAuthError(errEl, 'Podaj nazwę użytkownika (min. 2 znaki).');
+  }
+  if(pass1.length < 4){
+    return showAuthError(errEl, 'Hasło musi mieć min. 4 znaki.');
+  }
+  if(pass1 !== pass2){
+    return showAuthError(errEl, 'Hasła nie są identyczne.');
+  }
+
+  const profiles = getProfiles();
+  if(profiles.some(p => p.username.toLowerCase() === username.toLowerCase())){
+    return showAuthError(errEl, 'Ta nazwa użytkownika jest już zajęta.');
+  }
+
+  const now = new Date();
+  profiles.push({
+    username: username,
+    password: pass1,
+    createdAt: now.toISOString(),
+    createdDisplay: now.toLocaleString('pl-PL'),
+    lastLogin: now.toISOString(),
+    lastLoginDisplay: now.toLocaleString('pl-PL')
+  });
+  saveProfiles(profiles);
+  localStorage.setItem('currentUser', username);
+
+  logUserActivity('Utworzono profil: ' + username);
+  renderProfilState();
+}
+
+function loginProfile(){
+  const username = document.getElementById('loginUsername').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+
+  const profiles = getProfiles();
+  const idx = profiles.findIndex(p => p.username.toLowerCase() === username.toLowerCase());
+
+  if(idx === -1 || profiles[idx].password !== pass){
+    return showAuthError(errEl, 'Nieprawidłowa nazwa użytkownika lub hasło.');
+  }
+
+  const now = new Date();
+  profiles[idx].lastLogin = now.toISOString();
+  profiles[idx].lastLoginDisplay = now.toLocaleString('pl-PL');
+  saveProfiles(profiles);
+  localStorage.setItem('currentUser', profiles[idx].username);
+
+  logUserActivity('Zalogowano: ' + profiles[idx].username);
+  renderProfilState();
+}
+
+function logoutProfile(){
+  const username = getCurrentUsername();
+  if(username) logUserActivity('Wylogowano: ' + username);
+  localStorage.removeItem('currentUser');
+  renderProfilState();
+}
+
+function deleteProfile(){
+  const username = getCurrentUsername();
+  if(!username) return;
+  if(!confirm('Na pewno chcesz usunąć profil "' + username + '"? Tej operacji nie da się cofnąć.')) return;
+
+  let profiles = getProfiles();
+  profiles = profiles.filter(p => p.username.toLowerCase() !== username.toLowerCase());
+  saveProfiles(profiles);
+
+  unsubscribeEqRealtime();
+  localStorage.removeItem(eqStorageKey(username));
+  delete eqCache[username];
+  if(firebaseReady){
+    db.collection('inventories').doc(username).delete().catch(err => {
+      console.error('Błąd usuwania konta w bazie online:', err);
+    });
+  }
+
+  localStorage.removeItem('currentUser');
+
+  logUserActivity('Usunięto profil: ' + username);
+  renderProfilState();
+}
+
+function showAuthError(errEl, msg){
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+}
+
+// Aktualizuje badge w headerze oraz widok strony Profil, w zależności od stanu logowania
+function renderProfilState(){
+  const username = getCurrentUsername();
+  const badge = document.getElementById('profilBadge');
+  const authView = document.getElementById('authView');
+  const profilView = document.getElementById('profilView');
+
+  if(username){
+    subscribeEqRealtime(username);
+  } else {
+    unsubscribeEqRealtime();
+  }
+
+  if(username){
+    const profiles = getProfiles();
+    const p = profiles.find(pr => pr.username === username);
+
+    badge.style.display = 'flex';
+    document.getElementById('profilBadgeAvatar').textContent = initials(username);
+    document.getElementById('profilBadgeName').textContent = username;
+
+    authView.style.display = 'none';
+    profilView.style.display = 'block';
+    document.getElementById('profilViewAvatar').textContent = initials(username);
+    document.getElementById('profilViewName').textContent = username;
+    document.getElementById('profilViewMeta').textContent = 'Profil lokalny (zapisany w tej przeglądarce)';
+    document.getElementById('profilStatCreated').textContent = p ? p.createdDisplay : '—';
+    document.getElementById('profilStatLastLogin').textContent = p ? p.lastLoginDisplay : '—';
+  } else {
+    badge.style.display = 'none';
+    authView.style.display = 'block';
+    profilView.style.display = 'none';
+    // Wyczyść pola formularzy
+    ['loginUsername','loginPassword','registerUsername','registerPassword','registerPassword2'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    showAuthTab('login');
+  }
+}
+
+/* ========== EKWIPUNEK PETÓW (przypisany do zalogowanego profilu) ========== */
+
+function eqStorageKey(username){
+  return 'inventory_' + username;
+}
+
+/* ========== EKWIPUNEK ONLINE (Firestore) ==========
+   Ekwipunek każdego użytkownika trzyma się w dokumencie Firestore
+   "inventories/{nazwa_użytkownika}". Żeby nie przepisywać na async/await
+   każdego miejsca w kodzie, które czyta ekwipunek, trzymamy lokalną kopię
+   (eqCache) zasilaną NA ŻYWO przez Firestore onSnapshot — dzięki temu
+   getEqList() zostaje proste i synchroniczne, a widok odświeża się sam,
+   gdy dane zmienią się na innym urządzeniu/w innej karcie.
+   Jeśli Firebase nie jest skonfigurowany (patrz firebaseConfig wyżej),
+   wszystko po prostu działa lokalnie jak dotychczas (localStorage). */
+const eqCache = {};
+let eqUnsubscribe = null;
+let eqSyncedUsername = null;
+
+function setEqSyncStatus(state){
+  const el = document.getElementById('eqSyncStatus');
+  if(!el) return;
+  const map = {
+    off:    ['', ''],
+    connecting: ['eq-sync-connecting', '🟡 Łączenie z bazą online…'],
+    online: ['eq-sync-online', '🟢 Zsynchronizowano online'],
+    offline:['eq-sync-offline', '🔴 Offline — zmiany zapisują się tylko lokalnie'],
+  };
+  const [cls, txt] = map[state] || map.off;
+  el.className = 'eq-sync-status ' + cls;
+  el.textContent = txt;
+  el.style.display = txt ? 'block' : 'none';
+}
+
+function subscribeEqRealtime(username){
+  if(!username) return;
+  if(eqSyncedUsername === username && eqUnsubscribe) return; // już nasłuchujemy dla tego usera
+
+  if(eqUnsubscribe){ eqUnsubscribe(); eqUnsubscribe = null; }
+  eqSyncedUsername = username;
+
+  // Zawsze najpierw wczytaj to, co jest lokalnie (offline-first), żeby UI nie "mrugało" pustką.
+  eqCache[username] = JSON.parse(localStorage.getItem(eqStorageKey(username)) || '[]');
+
+  if(!firebaseReady){
+    setEqSyncStatus('off');
+    return;
+  }
+
+  setEqSyncStatus('connecting');
+  eqUnsubscribe = db.collection('inventories').doc(username).onSnapshot(
+    doc => {
+      const list = doc.exists ? (doc.data().list || []) : [];
+      eqCache[username] = list;
+      localStorage.setItem(eqStorageKey(username), JSON.stringify(list)); // kopia zapasowa offline
+      setEqSyncStatus('online');
+      if(document.getElementById('page-eq') && document.getElementById('page-eq').classList.contains('active')){
+        renderEqPage();
+      }
+    },
+    err => {
+      console.error('Firestore sync error:', err);
+      setEqSyncStatus('offline');
+    }
+  );
+}
+
+function unsubscribeEqRealtime(){
+  if(eqUnsubscribe){ eqUnsubscribe(); eqUnsubscribe = null; }
+  eqSyncedUsername = null;
+  setEqSyncStatus('off');
+}
+
+function getEqList(){
+  const username = getCurrentUsername();
+  if(!username) return [];
+  if(!(username in eqCache)){
+    eqCache[username] = JSON.parse(localStorage.getItem(eqStorageKey(username)) || '[]');
+  }
+  return eqCache[username];
+}
+
+function saveEqList(list){
+  const username = getCurrentUsername();
+  if(!username) return;
+  eqCache[username] = list;
+  localStorage.setItem(eqStorageKey(username), JSON.stringify(list)); // zawsze też lokalnie (offline-first)
+
+  if(firebaseReady){
+    db.collection('inventories').doc(username).set({
+      list: list,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      setEqSyncStatus('online');
+    }).catch(err => {
+      console.error('Firestore save error:', err);
+      setEqSyncStatus('offline');
+    });
+  }
+}
+
+/* ========== KOPIA ZAPASOWA / PRZYWRACANIE EKWIPUNKU (Panel Administracyjny) ==========
+   Ekwipunek trzyma się wyłącznie w localStorage przeglądarki (klucz 'inventory_<login>'
+   dla każdego profilu). Poniższe funkcje pakują ekwipunki WSZYSTKICH zarejestrowanych
+   profili do jednego pliku .json (eksport) i pozwalają wgrać taki plik z powrotem
+   (import), żeby odzyskać dane po ich przypadkowej utracie. */
+
+async function exportEqBackup(){
+  const profiles = getProfiles();
+  const users = {};
+  let totalPokemon = 0;
+  const resultEl = document.getElementById('backupResult');
+
+  resultEl.style.display = 'block';
+  resultEl.className = 'backup-summary';
+  resultEl.textContent = 'Przygotowywanie kopii zapasowej…';
+
+  for(const p of profiles){
+    let list = null;
+    if(firebaseReady){
+      try{
+        const doc = await db.collection('inventories').doc(p.username).get();
+        list = doc.exists ? (doc.data().list || []) : [];
+      } catch(err){
+        console.error('Backup fetch error for', p.username, err);
+      }
+    }
+    if(list === null){
+      // brak Firestore albo błąd połączenia — bierzemy to, co jest lokalnie
+      list = JSON.parse(localStorage.getItem(eqStorageKey(p.username)) || '[]');
+    }
+    users[p.username] = list;
+    totalPokemon += list.length;
+  }
+
+  const backup = {
+    type: 'pogo-cal-eq-backup',
+    version: 1,
+    source: firebaseReady ? 'online' : 'local',
+    exportedAt: new Date().toISOString(),
+    userCount: profiles.length,
+    pokemonCount: totalPokemon,
+    users: users
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+  a.href = url;
+  a.download = `ekwipunek-kopia-zapasowa-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  resultEl.className = 'backup-summary ok';
+  resultEl.textContent = `Pobrano kopię zapasową (${firebaseReady ? 'z bazy online' : 'z danych lokalnych'}): ${profiles.length} profili, ${totalPokemon} Pokémonów łącznie.`;
+  logUserActivity('Pobrano kopię zapasową ekwipunku (' + totalPokemon + ' Pokémonów, ' + profiles.length + ' profili)');
+}
+
+function importEqBackup(event){
+  const file = event.target.files && event.target.files[0];
+  const resultEl = document.getElementById('backupResult');
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    let backup;
+    try{
+      backup = JSON.parse(e.target.result);
+    } catch(err){
+      resultEl.style.display = 'block';
+      resultEl.className = 'backup-summary warn';
+      resultEl.textContent = 'Nie udało się odczytać pliku — upewnij się, że to prawidłowy plik .json pobrany wcześniej z tej aplikacji.';
+      event.target.value = '';
+      return;
+    }
+
+    if(!backup || backup.type !== 'pogo-cal-eq-backup' || typeof backup.users !== 'object'){
+      resultEl.style.display = 'block';
+      resultEl.className = 'backup-summary warn';
+      resultEl.textContent = 'To nie jest plik kopii zapasowej ekwipunku z tej aplikacji.';
+      event.target.value = '';
+      return;
+    }
+
+    const usernames = Object.keys(backup.users);
+    const totalPokemon = usernames.reduce((sum, u) => sum + (backup.users[u] || []).length, 0);
+    const exportedDate = backup.exportedAt ? new Date(backup.exportedAt).toLocaleString('pl-PL') : 'nieznana data';
+
+    const sure = confirm(
+      `Wgrać kopię zapasową z dnia ${exportedDate}?\n\n` +
+      `Zawiera ${usernames.length} profili i ${totalPokemon} Pokémonów.\n\n` +
+      `UWAGA: nadpisze to obecny ekwipunek${firebaseReady ? ' w bazie online' : ' lokalnie'} dla profili wymienionych w pliku ` +
+      `(pozostałe profile nienaruszone).`
+    );
+    if(!sure){
+      event.target.value = '';
+      return;
+    }
+
+    resultEl.style.display = 'block';
+    resultEl.className = 'backup-summary';
+    resultEl.textContent = 'Przywracanie danych…';
+
+    for(const username of usernames){
+      const list = backup.users[username] || [];
+      localStorage.setItem(eqStorageKey(username), JSON.stringify(list));
+      eqCache[username] = list;
+      if(firebaseReady){
+        try{
+          await db.collection('inventories').doc(username).set({
+            list: list,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(err){
+          console.error('Restore write error for', username, err);
+        }
+      }
+    }
+
+    resultEl.className = 'backup-summary ok';
+    resultEl.textContent = `Przywrócono ${totalPokemon} Pokémonów dla ${usernames.length} profili (kopia z ${exportedDate})${firebaseReady ? ' — zapisano w bazie online' : ' — zapisano lokalnie'}.`;
+    logUserActivity('Przywrócono ekwipunek z kopii zapasowej (' + totalPokemon + ' Pokémonów, ' + usernames.length + ' profili)');
+
+    // Jeśli aktualnie zalogowany użytkownik jest wśród przywróconych, odśwież widok ekwipunku.
+    const current = getCurrentUsername();
+    if(current && usernames.includes(current) && document.getElementById('page-eq').classList.contains('active')){
+      renderEqPage();
+    }
+
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function toggleEqForm(show){
+  const form = document.getElementById('eqForm');
+  const shouldShow = show !== undefined ? show : (form.style.display === 'none');
+  form.style.display = shouldShow ? 'block' : 'none';
+  if(!shouldShow){
+    resetEqForm();
+  }
+}
+
+function openEqAddForm(){
+  resetEqForm();
+  toggleEqForm(true);
+  document.getElementById('eqForm').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function resetEqForm(){
+  document.getElementById('eqEditId').value = '';
+  ['eqName','eqCP','eqHP','eqIvAtk','eqIvDef','eqIvSta','eqFastMove','eqChargeMove','eqChargeMove2','eqNote'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('eqFormSelect').value = 'normal';
+  document.getElementById('eqLevel').value = '20';
+  document.getElementById('eqLevelAuto').className = 'eq-level-auto';
+  document.getElementById('eqLevelAuto').innerHTML = 'Podaj CP oraz IV rozpoznanego Pokémona, żeby wyliczyć poziom automatycznie.';
+  document.getElementById('eqLevelManualWrap').style.display = 'none';
+
+  document.getElementById('eqNameHint').textContent = '';
+  document.getElementById('eqFastMove').style.display = 'block';
+  document.getElementById('eqFastMoveSelect').style.display = 'none';
+  document.getElementById('eqChargeMove').style.display = 'block';
+  document.getElementById('eqChargeMoveSelect').style.display = 'none';
+  document.getElementById('eqChargeMove2').style.display = 'block';
+  document.getElementById('eqChargeMove2Select').style.display = 'none';
+}
+
+function saveEqPokemon(){
+  const name = document.getElementById('eqName').value.trim();
+  if(!name){
+    alert('Podaj nazwę Pokémona.');
+    return;
+  }
+
+  const ivAtk = clampIv(document.getElementById('eqIvAtk').value);
+  const ivDef = clampIv(document.getElementById('eqIvDef').value);
+  const ivSta = clampIv(document.getElementById('eqIvSta').value);
+
+  const editId = document.getElementById('eqEditId').value;
+  const list = getEqList();
+
+  const pokeData = {
+    id: editId || ('eq_' + Date.now() + '_' + Math.floor(Math.random()*1000)),
+    name: name,
+    form: document.getElementById('eqFormSelect').value,
+    cp: document.getElementById('eqCP').value ? Number(document.getElementById('eqCP').value) : null,
+    level: Number(document.getElementById('eqLevel').value),
+    hp: document.getElementById('eqHP').value ? Number(document.getElementById('eqHP').value) : null,
+    ivAtk: ivAtk, ivDef: ivDef, ivSta: ivSta,
+    fastMove: document.getElementById('eqFastMove').value.trim(),
+    chargeMove: document.getElementById('eqChargeMove').value.trim(),
+    chargeMove2: document.getElementById('eqChargeMove2').value.trim(),
+    note: document.getElementById('eqNote').value.trim(),
+    addedAt: new Date().toISOString()
+  };
+
+  if(editId){
+    const idx = list.findIndex(p => p.id === editId);
+    if(idx !== -1){
+      pokeData.addedAt = list[idx].addedAt;
+      list[idx] = pokeData;
+    }
+  } else {
+    list.push(pokeData);
+  }
+
+  saveEqList(list);
+  logUserActivity((editId ? 'Zaktualizowano w ekwipunku: ' : 'Dodano do ekwipunku: ') + name);
+  toggleEqForm(false);
+  renderEqPage();
+}
+
+function clampIv(val){
+  if(val === '' || val === null || val === undefined) return null;
+  let n = Number(val);
+  if(isNaN(n)) return null;
+  n = Math.max(0, Math.min(15, Math.round(n)));
+  return n;
+}
+
+function editEqPokemon(id){
+  const list = getEqList();
+  const p = list.find(pk => pk.id === id);
+  if(!p) return;
+
+  toggleEqForm(true);
+  document.getElementById('eqEditId').value = p.id;
+  document.getElementById('eqName').value = p.name;
+  document.getElementById('eqFormSelect').value = p.form || 'normal';
+  document.getElementById('eqCP').value = p.cp ?? '';
+  document.getElementById('eqLevel').value = p.level;
+  document.getElementById('eqHP').value = p.hp ?? '';
+  document.getElementById('eqIvAtk').value = p.ivAtk ?? '';
+  document.getElementById('eqIvDef').value = p.ivDef ?? '';
+  document.getElementById('eqIvSta').value = p.ivSta ?? '';
+  document.getElementById('eqFastMove').value = p.fastMove || '';
+  document.getElementById('eqChargeMove').value = p.chargeMove || '';
+  document.getElementById('eqChargeMove2').value = p.chargeMove2 || '';
+  document.getElementById('eqNote').value = p.note || '';
+
+  onEqNameChange();
+  recalcEqLevel();
+
+  document.getElementById('eqForm').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function deleteEqPokemon(id){
+  const list = getEqList();
+  const p = list.find(pk => pk.id === id);
+  if(!p) return;
+  if(!confirm('Usunąć "' + p.name + '" z ekwipunku?')) return;
+
+  const newList = list.filter(pk => pk.id !== id);
+  saveEqList(newList);
+  logUserActivity('Usunięto z ekwipunku: ' + p.name);
+  renderEqPage();
+}
+
+const EQ_FORM_LABELS = {normal:'Zwykła', mega:'Mega', shadow:'Shadow', purified:'Purified'};
+
+function renderEqPage(){
+  const username = getCurrentUsername();
+  const locked = document.getElementById('eqLocked');
+  const unlocked = document.getElementById('eqUnlocked');
+
+  if(!username){
+    locked.style.display = 'block';
+    unlocked.style.display = 'none';
+    return;
+  }
+
+  locked.style.display = 'none';
+  unlocked.style.display = 'block';
+  document.getElementById('eqOwnerName').textContent = username;
+
+  const list = getEqList().slice().sort((a,b) => (b.cp||0) - (a.cp||0));
+  const listEl = document.getElementById('eqList');
+  const countEl = document.getElementById('eqCount');
+
+  countEl.textContent = list.length + (list.length === 1 ? ' Pokémon w ekwipunku' : ' Pokémonów w ekwipunku');
+
+  if(list.length === 0){
+    listEl.innerHTML = '<div class="eq-empty">Ekwipunek jest pusty. Dodaj pierwszego Pokémona przyciskiem powyżej.</div>';
+    return;
+  }
+
+  listEl.innerHTML = list.map(p => buildEqCardHtml(p, false)).join('');
+}
+
+/* Buduje HTML pojedynczej karty Pokémona z ekwipunku.
+   readOnly=true ukrywa przyciski edycji/usuwania (używane w podglądzie admina). */
+function buildEqCardHtml(p, readOnly){
+  const ivLine = (p.ivAtk!==null && p.ivDef!==null && p.ivSta!==null)
+    ? `<div class="eq-iv">
+         <div><b>${p.ivAtk}</b>ATK</div>
+         <div><b>${p.ivDef}</b>DEF</div>
+         <div><b>${p.ivSta}</b>STA</div>
+       </div>`
+    : '';
+  const movesLine = (p.fastMove || p.chargeMove || p.chargeMove2)
+    ? `<div class="eq-moves">
+         ${p.fastMove ? `<div><b>Szybki:</b> ${escapeHtml(p.fastMove)}</div>` : ''}
+         ${p.chargeMove ? `<div><b>Mocny:</b> ${escapeHtml(p.chargeMove)}</div>` : ''}
+         ${p.chargeMove2 ? `<div><b>Mocny 2:</b> ${escapeHtml(p.chargeMove2)}</div>` : ''}
+       </div>`
+    : '';
+  const noteLine = p.note ? `<div class="eq-note">"${escapeHtml(p.note)}"</div>` : '';
+  const actionsLine = readOnly ? '' : `
+        <div class="eq-card-actions">
+          <button onclick="editEqPokemon('${p.id}')">Edytuj</button>
+          <button class="eq-del" onclick="deleteEqPokemon('${p.id}')">Usuń</button>
+        </div>`;
+
+  return `
+      <div class="eq-card">
+        <div class="eq-card-top">
+          <div>
+            <div class="eq-name">${escapeHtml(p.name)}</div>
+          </div>
+          <div class="eq-form-tag">${EQ_FORM_LABELS[p.form] || 'Zwykła'}</div>
+        </div>
+        <div class="eq-cp">${p.cp ? 'CP ' + p.cp : 'CP nieznane'}</div>
+        <div class="eq-lvl">Poziom ${p.level}${p.hp ? ' · ' + p.hp + ' HP' : ''}</div>
+        ${ivLine}
+        ${movesLine}
+        ${noteLine}
+        ${actionsLine}
+      </div>
+    `;
+}
+
+/* ========== PODGLĄD EKWIPUNKÓW ZAREJESTROWANYCH GRACZY (panel admina) ========== */
+
+function populateAdminEqUserSelect(){
+  const sel = document.getElementById('adminEqUserSelect');
+  if(!sel) return;
+  const profiles = getProfiles();
+  const current = sel.value;
+  let html = '<option value="">— wybierz gracza —</option>';
+  profiles.forEach(p => {
+    html += `<option value="${escapeHtml(p.username)}">${escapeHtml(p.username)}</option>`;
+  });
+  sel.innerHTML = html;
+  if(current && profiles.some(p => p.username === current)){
+    sel.value = current;
+  }
+  renderAdminPlayerEq();
+}
+
+function renderAdminPlayerEq(){
+  const sel = document.getElementById('adminEqUserSelect');
+  const listEl = document.getElementById('adminEqList');
+  const countEl = document.getElementById('adminEqCount');
+  if(!sel || !listEl || !countEl) return;
+
+  const username = sel.value;
+  if(!username){
+    listEl.innerHTML = '<div class="eq-empty">Wybierz gracza z listy powyżej, żeby zobaczyć jego ekwipunek.</div>';
+    countEl.textContent = '';
+    return;
+  }
+
+  const list = (JSON.parse(localStorage.getItem(eqStorageKey(username)) || '[]')).slice()
+    .sort((a,b) => (b.cp||0) - (a.cp||0));
+
+  countEl.textContent = list.length + (list.length === 1 ? ' Pokémon w ekwipunku' : ' Pokémonów w ekwipunku');
+
+  if(list.length === 0){
+    listEl.innerHTML = '<div class="eq-empty">Ten profil nie ma jeszcze żadnych Pokémonów w ekwipunku.</div>';
+    return;
+  }
+
+  listEl.innerHTML = list.map(p => buildEqCardHtml(p, true)).join('');
+}
+
+/* Usuwa wybrany profil (razem z jego ekwipunkiem) z poziomu panelu admina.
+   Kasuje: wpis w liście profili, lokalny ekwipunek (localStorage), ewentualny
+   dokument w bazie online (Firestore) oraz wylogowuje bieżącego użytkownika,
+   jeśli to właśnie jego konto zostało usunięte. */
+async function deleteUserAccountAdmin(){
+  const sel = document.getElementById('adminEqUserSelect');
+  const username = sel ? sel.value : '';
+  if(!username){
+    alert('Najpierw wybierz gracza z listy powyżej.');
+    return;
+  }
+
+  const sure = confirm(
+    `Na pewno chcesz TRWALE usunąć konto "${username}"?\n\n` +
+    `Usunięty zostanie profil logowania oraz cały jego ekwipunek (lokalnie` +
+    `${firebaseReady ? ' i w bazie online' : ''}). Tej operacji nie da się cofnąć.`
+  );
+  if(!sure) return;
+
+  // 1) Usuń profil z listy zarejestrowanych kont
+  let profiles = getProfiles();
+  profiles = profiles.filter(p => p.username.toLowerCase() !== username.toLowerCase());
+  saveProfiles(profiles);
+
+  // 2) Usuń lokalny ekwipunek i cache
+  localStorage.removeItem(eqStorageKey(username));
+  delete eqCache[username];
+
+  // 3) Jeśli baza online jest skonfigurowana, usuń tam też dokument ekwipunku
+  if(firebaseReady){
+    try{
+      await db.collection('inventories').doc(username).delete();
+    } catch(err){
+      console.error('Błąd usuwania konta w bazie online:', err);
+    }
+  }
+
+  // 4) Jeśli usunięto aktualnie zalogowanego użytkownika — wyloguj go
+  const current = getCurrentUsername();
+  if(current && current.toLowerCase() === username.toLowerCase()){
+    unsubscribeEqRealtime();
+    localStorage.removeItem('currentUser');
+    renderProfilState();
+  }
+
+  logUserActivity('Admin usunął konto: ' + username);
+
+  // 5) Odśwież listę i widok w panelu admina
+  populateAdminEqUserSelect();
+
+  alert(`Konto "${username}" zostało usunięte.`);
+}
+
+/* Pokazuje, czy dane ekwipunku są aktualnie synchronizowane z bazą online (Firestore),
+   czy trzymane wyłącznie lokalnie w tej przeglądarce. */
+function updateBackupSourceStatus(){
+  const el = document.getElementById('backupSourceStatus');
+  if(!el) return;
+  if(firebaseReady){
+    el.textContent = '● Źródło danych: baza online (Firestore) + kopia lokalna offline';
+    el.style.color = 'var(--win)';
+  } else {
+    el.textContent = '● Źródło danych: wyłącznie lokalnie (baza online nie jest skonfigurowana)';
+    el.style.color = 'var(--muted)';
+  }
+}
+
+/* ========== SYMULATOR RAIDÓW (Panel Administracyjny) ==========
+   Orientacyjne wyliczenie, czy ekwipunek danego gracza da radę zbić wybranego,
+   aktualnego bossa raidowego. Bazuje na CP Pokémonów gracza oraz przewadze
+   typów (typ własny Pokémona jako przybliżenie STAB — aplikacja nie ma pełnej
+   bazy typów poszczególnych ruchów), a NIE na dokładnej symulacji walki
+   (brak base statów ataku/obrony/HP bossa, dokładnych DPS itd.). Traktuj wynik
+   jako wskazówkę, a nie pewnik. */
+
+const RAID_BOSS_SIM_LIST = [];
+function getRaidBossSimList(){
+  if(RAID_BOSS_SIM_LIST.length) return RAID_BOSS_SIM_LIST;
+  POKEMON_RAID5_ZWYKLE.forEach((p, i) => {
+    const ref = RAIDS_5STAR[i];
+    if(!ref || !ref.cp20) return;
+    RAID_BOSS_SIM_LIST.push({ label: p.name, types: p.types, cp20: ref.cp20, cp25: ref.cp25, tier: '5★' });
+  });
+  POKEMON_RAID_MEGA_AKTUALNE.forEach((p, i) => {
+    const ref = RAIDS_MEGA[i];
+    if(!ref || !ref.cp20) return;
+    RAID_BOSS_SIM_LIST.push({ label: p.name, types: p.types, cp20: ref.cp20, cp25: ref.cp25, tier: 'Mega' });
+  });
+  return RAID_BOSS_SIM_LIST;
+}
+
+let simMode = 'team';
+
+function setSimMode(mode){
+  simMode = mode;
+  document.getElementById('simModeBtnTeam').classList.toggle('active', mode === 'team');
+  document.getElementById('simModeBtnSolo').classList.toggle('active', mode === 'solo');
+  document.getElementById('simModeDesc').textContent = mode === 'team'
+    ? 'Do walki wchodzi 6 najlepszych Pokémonów gracza — liczy się ich uśredniona siła przeciwko bossowi.'
+    : 'Do walki wchodzi tylko najlepszy Pokémon gracza, non-stop odradzany (np. eliksirami) — liczy się jego pełna, nieprzerwana siła przeciwko bossowi.';
+}
+
+function populateSimBossSelect(){
+  const sel = document.getElementById('simBossSelect');
+  if(!sel) return;
+  const current = sel.value;
+  let html = '<option value="">— wybierz bossa —</option>';
+  getRaidBossSimList().forEach((b, i) => {
+    html += `<option value="${i}">${escapeHtml(b.label)} (${b.tier}, CP ${b.cp20})</option>`;
+  });
+  sel.innerHTML = html;
+  if(current) sel.value = current;
+}
+
+function populateSimUserSelect(){
+  const sel = document.getElementById('simUserSelect');
+  if(!sel) return;
+  const current = sel.value;
+  const profiles = getProfiles();
+  let html = '<option value="">— wybierz gracza —</option>';
+  profiles.forEach(p => {
+    html += `<option value="${escapeHtml(p.username)}">${escapeHtml(p.username)}</option>`;
+  });
+  sel.innerHTML = html;
+  if(current && profiles.some(p => p.username === current)) sel.value = current;
+}
+
+// Szuka typów danego gatunku w całej bazie POKEMON_DB (wszystkie kategorie/podkategorie),
+// dopasowując po nazwie tak samo jak przy autouzupełnianiu ekwipunku.
+function resolvePlayerPokemonTypes(rawName){
+  const clean = (rawName || '').replace(/\s*\((Raid 5★|Mega Raid)\)\s*$/i, '').trim().toLowerCase();
+  let found = null;
+  Object.values(POKEMON_DB).forEach(mainCat => {
+    Object.values(mainCat).forEach(list => {
+      list.forEach(p => {
+        const pClean = p.name.replace(/\s*\((Raid 5★|Mega Raid)\)\s*$/i, '').trim().toLowerCase();
+        if(pClean === clean) found = p.types;
+      });
+    });
+  });
+  return found;
+}
+
+// Zwraca najlepszy mnożnik skuteczności typów własnych Pokémona (STAB) przeciwko typom bossa.
+function bestTypeMultiplierAgainstBoss(ownTypes, bossTypes){
+  let best = 1;
+  ownTypes.forEach(ownType => {
+    const mult = bossTypes.reduce((acc, bt) => acc * getMultiplier(ownType, bt), 1);
+    if(mult > best) best = mult;
+  });
+  return best;
+}
+
+function simulateRaidChallenge(){
+  const bossIdx = document.getElementById('simBossSelect').value;
+  const username = document.getElementById('simUserSelect').value;
+  const resultBox = document.getElementById('simResult');
+
+  if(bossIdx === '' || !username){
+    alert('Wybierz bossa raidowego oraz gracza.');
+    return;
+  }
+
+  const boss = getRaidBossSimList()[Number(bossIdx)];
+  const eqList = JSON.parse(localStorage.getItem(eqStorageKey(username)) || '[]');
+
+  resultBox.style.display = 'block';
+
+  // Info o bossie
+  const bossTypesHtml = boss.types.map(t => `<span class="own-type-chip">${PL_NAMES[t]}</span>`).join('');
+  document.getElementById('simBossInfo').innerHTML = `
+    <p style="color:var(--muted); font-size:13px; margin-bottom:6px;">
+      Boss: <b style="color:var(--ink);">${escapeHtml(boss.label)}</b> (${boss.tier}, referencyjne CP ${boss.cp20})
+    </p>
+    <div class="super-types-row">${bossTypesHtml}</div>
+  `;
+
+  if(eqList.length === 0){
+    document.getElementById('simPokemonList').innerHTML = '<div class="eq-empty">Ten gracz nie ma żadnych Pokémonów w ekwipunku — nie da rady walczyć.</div>';
+    renderSimVerdict('lose', 'PRZEGRANA', 'Gracz nie ma żadnych Pokémonów w ekwipunku.');
+    return;
+  }
+
+  // Liczymy siłę każdego Pokémona gracza względem typów bossa
+  const scored = eqList.map(p => {
+    const types = resolvePlayerPokemonTypes(p.name);
+    const mult = types ? bestTypeMultiplierAgainstBoss(types, boss.types) : 1;
+    const cp = Number(p.cp) || 0;
+    return { p, mult, cp, score: cp * mult, unknownType: !types };
+  }).sort((a, b) => b.score - a.score);
+
+  // THRESHOLD_FACTOR kalibruje, ile realnej "siły" (CP × mnożnik typu) potrzeba,
+  // żeby w pojedynkę (jednym kontem) zbić bossa w limicie czasu. W praktyce większość
+  // legendarnych 5★/Mega raidów wymaga grupy kilku trenerów — dlatego próg jest
+  // wysoki, a wynikiem jest przede wszystkim SZACOWANA LICZBA POTRZEBNYCH TRENERÓW,
+  // a nie proste "tak/nie" dla jednej osoby.
+  const THRESHOLD_FACTOR = 6.0;
+  const threshold = boss.cp20 * THRESHOLD_FACTOR;
+
+  let used, measure, modeNote;
+  if(simMode === 'team'){
+    used = scored.slice(0, 6);
+    const total = used.reduce((sum, u) => sum + u.score, 0);
+    measure = used.length ? total / used.length : 0;
+    modeNote = `Drużyna ${used.length} Pokémonów — uśredniona siła zespołu (to nadal jedno konto).`;
+  } else {
+    used = scored.slice(0, 1);
+    measure = used.length ? used[0].score * 1.1 : 0; // bonus za pełne, nieprzerwane skupienie na jednym ataku
+    modeNote = 'Pojedynczy Pokémon, ciągle odradzany — liczy się jego pełna siła (to nadal jedno konto).';
+  }
+
+  document.getElementById('simPokemonList').innerHTML = used.map(u => `
+    <div class="simres-row${u.unknownType ? ' unknown' : ''}">
+      <div>
+        <div class="name">${escapeHtml(u.p.name)}</div>
+        <div class="meta">${u.cp ? 'CP ' + u.cp : 'CP nieznane'} · mnożnik typu ${u.mult}×${u.unknownType ? ' (nieznany gatunek — typ nierozpoznany)' : ''}</div>
+      </div>
+      <div class="score">${Math.round(u.score)} pkt</div>
+    </div>
+  `).join('') + `<p style="color:var(--muted); font-size:12px; margin-top:6px;">${modeNote}</p>`;
+
+  if(measure <= 0){
+    renderSimVerdict('lose', 'BRAK SZANS', 'Żaden Pokémon gracza nie ma podanego CP lub sensownej przewagi typu — nie da się oszacować siły.');
+    logUserActivity(`Symulacja raidu: ${boss.label} vs ${username} (${simMode === 'team' ? 'drużyna 6' : '1 Pokémon'})`);
+    return;
+  }
+
+  const recommendedTrainers = Math.ceil(threshold / measure);
+
+  if(recommendedTrainers <= 1){
+    renderSimVerdict('win', 'DA(DZĄ) RADĘ W POJEDYNKĘ', `Siła tego konta (${Math.round(measure)} pkt) wystarcza, żeby zbić tego bossa samodzielnie, bez pomocy innych trenerów.`);
+  } else if(recommendedTrainers === 2){
+    renderSimVerdict('warn', 'LEPIEJ W 2 OSOBY', `Siła tego konta (${Math.round(measure)} pkt) to około połowy tego, co potrzeba (${Math.round(threshold)} pkt) — samodzielnie może się nie udać, ale w duecie z podobnym trenerem powinno pójść bez problemu.`);
+  } else {
+    renderSimVerdict('lose', `SAMI NIE DADZĄ RADY — POTRZEBA OK. ${recommendedTrainers} TRENERÓW`, `Siła tego konta (${Math.round(measure)} pkt) to zbyt mało wobec wymaganego poziomu (${Math.round(threshold)} pkt) na samodzielne zbicie. Szacunkowo potrzeba grupy ok. ${recommendedTrainers} trenerów podobnego poziomu, żeby zmieścić się w czasie raidu.`);
+  }
+
+  logUserActivity(`Symulacja raidu: ${boss.label} vs ${username} (${simMode === 'team' ? 'drużyna 6' : '1 Pokémon'}) — szac. trenerów: ${recommendedTrainers}`);
+}
+
+function renderSimVerdict(cls, text, msg){
+  const box = document.getElementById('simVerdict');
+  box.className = 'verdict ' + cls;
+  document.getElementById('simVerdictText').textContent = text;
+  document.getElementById('simVerdictMsg').textContent = msg;
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/* ========== SYSTEM LOGOWANIA ========== */
+
+// Inicjalizacja logów
+function initializeLogs(){
+  if(!localStorage.getItem('accessLogs')){
+    localStorage.setItem('accessLogs', JSON.stringify([]));
+  }
+  if(!localStorage.getItem('activityLogs')){
+    localStorage.setItem('activityLogs', JSON.stringify([]));
+  }
+  if(!localStorage.getItem('profiles')){
+    localStorage.setItem('profiles', JSON.stringify([]));
+  }
+  logPageAccess();
+  renderProfilState();
+}
+
+// Logowanie wejścia na stronę
+function logPageAccess(){
+  const logs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
+  const now = new Date();
+  
+  const userAgent = navigator.userAgent;
+  const device = /mobile|android|iphone|ipad|tablet/i.test(userAgent) ? 'Mobilny' : 'Desktop';
+  const browser = userAgent.includes('Chrome') ? 'Chrome' : userAgent.includes('Firefox') ? 'Firefox' : userAgent.includes('Safari') ? 'Safari' : 'Inny';
+  
+  logs.push({
+    timestamp: now.toISOString(),
+    displayTime: now.toLocaleString('pl-PL'),
+    device: device,
+    browser: browser,
+    userAgent: userAgent
+  });
+  
+  localStorage.setItem('accessLogs', JSON.stringify(logs));
+  renderAccessLogs();
+}
+
+// Logowanie aktywności użytkownika
+function logUserActivity(action){
+  const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+  const now = new Date();
+  const username = getCurrentUsername();
+
+  logs.push({
+    timestamp: now.toISOString(),
+    displayTime: now.toLocaleString('pl-PL'),
+    action: (username ? '[' + username + '] ' : '') + action,
+    page: getCurrentPage()
+  });
+  
+  localStorage.setItem('activityLogs', JSON.stringify(logs));
+  renderActivityLogs();
+}
+
+function getCurrentPage(){
+  if(document.getElementById('page-calc').classList.contains('active')) return 'Kalkulator';
+  if(document.getElementById('page-cal').classList.contains('active')) return 'Eventy & Raidy';
+  if(document.getElementById('page-super').classList.contains('active')) return 'Superefektywność';
+  if(document.getElementById('page-profil').classList.contains('active')) return 'Profil';
+  if(document.getElementById('page-eq').classList.contains('active')) return 'Ekwipunek';
+  if(document.getElementById('page-adm').classList.contains('active')) return 'Administracja';
+  return 'Nieznana';
+}
+
+// Wyświetlanie logów dostępu
+function renderAccessLogs(){
+  const logs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
+  const container = document.getElementById('accessLogsList');
+  container.innerHTML = '';
+  
+  const recentLogs = logs.slice(-50).reverse();
+  
+  recentLogs.forEach((log, idx) => {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `
+      <span class="log-time">${log.displayTime}</span>
+      <span class="log-action">Wejście na stronę</span>
+      <span class="log-device">🖥️ ${log.device} | ${log.browser}</span>
+    `;
+    container.appendChild(entry);
+  });
+  
+  if(logs.length === 0){
+    container.innerHTML = '<p style="color: var(--muted);">Brak logów...</p>';
+  }
+}
+
+// Wyświetlanie logów aktywności
+function renderActivityLogs(){
+  const logs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+  const container = document.getElementById('activityLogsList');
+  container.innerHTML = '';
+  
+  const recentLogs = logs.slice(-50).reverse();
+  
+  recentLogs.forEach((log, idx) => {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `
+      <span class="log-time">${log.displayTime}</span>
+      <span class="log-action">${log.action}</span>
+      <span class="log-device">📍 ${log.page}</span>
+    `;
+    container.appendChild(entry);
+  });
+  
+  if(logs.length === 0){
+    container.innerHTML = '<p style="color: var(--muted);">Brak logów aktywności...</p>';
+  }
+}
+
+// Statystyki
+function updateStats(){
+  const accessLogs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
+  const activityLogs = JSON.parse(localStorage.getItem('activityLogs') || '[]');
+  
+  const today = new Date().toLocaleDateString('pl-PL');
+  const todayLogs = accessLogs.filter(log => log.displayTime.startsWith(today.split('.')[2]));
+  
+  const uniqueUsers = new Set(accessLogs.map(log => log.device)).size;
+  
+  document.getElementById('statTotalVisits').textContent = accessLogs.length;
+  document.getElementById('statTodayVisits').textContent = todayLogs.length;
+  document.getElementById('statUniqueUsers').textContent = uniqueUsers;
+  
+  const avgSession = Math.round(accessLogs.length > 0 ? activityLogs.length / accessLogs.length : 0);
+  document.getElementById('statAvgSession').textContent = avgSession + 'm';
+}
+
+// Czyszczenie logów
+function clearLogs(type){
+  if(confirm(`Czy na pewno chcesz wyczyścić logi ${type === 'access' ? 'dostępu' : 'aktywności'}?`)){
+    if(type === 'access'){
+      localStorage.setItem('accessLogs', JSON.stringify([]));
+      renderAccessLogs();
+    } else {
+      localStorage.setItem('activityLogs', JSON.stringify([]));
+      renderActivityLogs();
+    }
+    updateStats();
+  }
+}
+
+function clearAllLogs(){
+  if(confirm('UWAGA! Usuniesz WSZYSTKIE dane logowania. Czy na pewno?')){
+    localStorage.setItem('accessLogs', JSON.stringify([]));
+    localStorage.setItem('activityLogs', JSON.stringify([]));
+    renderAccessLogs();
+    renderActivityLogs();
+    updateStats();
+  }
+}
+
+// Śledzenie zmian na stronie
+document.addEventListener('click', function(e){
+  if(e.target.classList.contains('nav-btn')){
+    logUserActivity('Przejście do: ' + e.target.textContent);
+  }
+  if(e.target.classList.contains('chk')){
+    logUserActivity('Zaznaczenie przedmiotu');
+  }
+});
+
+document.addEventListener('input', function(e){
+  if(e.target.classList.contains('qty')){
+    logUserActivity('Zmiana ilości przedmiotu');
+  }
+  if(e.target.id === 'paidCoins'){
+    logUserActivity('Wprowadzenie ceny oferty');
+  }
+});
+
+/* Kalendarz eventów */
+const EVENTS = [
+  {date:'1 sierpnia', name:'Gigantamax Rillaboom — Max Battle Day', tag:null,
+   desc:'Specjalny dzień Max Battles z Gigantamax Rillaboom.'},
+  {date:'4–10 sierpnia', name:'Summer Marathon: Arctic Embers', tag:'ultra',
+   desc:'Zwiększone szanse na Shiny Ponyta, Slugma, Snover i Vanillite. Debiut Shiny Snom z nagród GO Pass.'},
+  {date:'8 sierpnia', name:'Fire and Ice Hatch Day', tag:'raidday',
+   desc:'Specjalny dzień wyklucia jaj z Pokémonami typu ognia i lodu.'},
+  {date:'16 sierpnia', name:'Community Day: Nickit', tag:'community',
+   desc:'Godz. 14:00–17:00. Zwiększone spawny, 3x pyłek, 3h kadzidło, bonusy na wymiany.'},
+  {date:'18–24 sierpnia', name:'Ultra Unlock: Water Festival', tag:'ultra',
+   desc:'Debiut Arrokuda i Cramorant. Powrót Psyducka w kółku do pływania.'},
+  {date:'22 sierpnia', name:'Ultra Unlock: Starmie — Super Mega Raid Day', tag:'raidday',
+   desc:'Godz. 11:00–17:00, dodatkowe Super Mega Raidy.'},
+  {date:'25–30 sierpnia', name:'Pokémon XP & 2026 Worlds', tag:null,
+   desc:'Bonusy związane z Mistrzostwami Świata Pokémon 2026.'},
+];
+
+/* Raidy z informacją o 100% IV — CP przy Lv.20 (bez pogody) i Lv.25 (boost pogodowy) */
+const RAIDS_5STAR = [
+  {rng:'29 lip – 4 sie', boss:'Kyurem', iv:true, cp20:2042, cp25:2553},
+  {rng:'5–11 sie', boss:'Uxie / Mesprit / Azelf*', iv:true, cp20:1834, cp25:2293, note:'*CP dla Azelf — Uxie/Mesprit różnią się o kilka CP'},
+  {rng:'12–18 sie', boss:'Groudon', iv:true, cp20:2351, cp25:2939},
+  {rng:'19–25 sie', boss:'Lunala (Shiny debiut)', iv:true, cp20:2310, cp25:2887},
+  {rng:'26 sie – 8 wrz', boss:'Regirock', iv:true, cp20:1784, cp25:2230},
+  {rng:'26 sie – 8 wrz', boss:'Regice', iv:true, cp20:1784, cp25:2230},
+  {rng:'26 sie – 8 wrz', boss:'Registeel', iv:true, cp20:1398, cp25:1748},
+];
+
+const RAIDS_MEGA = [
+  {rng:'29 lip – 4 sie', boss:'Mega Aggron', iv:true, cp20:2378, cp25:2973},
+  {rng:'5–11 sie', boss:'Mega Blaziken', iv:true, cp20:2377, cp25:2972},
+  {rng:'12–18 sie', boss:'Mega Garchomp', iv:true, cp20:2264, cp25:2830},
+  {rng:'19–25 sie', boss:'—', iv:false},
+];
+
+function renderEvents(){
+  const el = document.getElementById('eventList');
+  el.innerHTML = '';
+  EVENTS.forEach(ev=>{
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    const tagHtml = ev.tag ? `<span class="tag ${ev.tag}">${ev.tag==='community' ? 'community day' : ev.tag==='ultra' ? 'ultra unlock' : 'raid day'}</span>` : '';
+    row.innerHTML = `
+      <div class="event-date">${ev.date}</div>
+      <div class="event-info">
+        <b>${ev.name}</b>${tagHtml}
+        <div class="desc">${ev.desc}</div>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderRaids(){
+  const r5 = document.getElementById('raid5List');
+  const rm = document.getElementById('raidMegaList');
+  r5.innerHTML = '';
+  rm.innerHTML = '';
+  
+  RAIDS_5STAR.forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'raid-week';
+    const ivBadge = r.iv ? '<span class="iv-badge">100% IV</span>' : '';
+    const cpHtml = r.iv ? `<div class="cp-line">CP na 100% IV: <b>${r.cp20}</b> (Lv.20, bez pogody) · <b>${r.cp25}</b> (Lv.25, z pogodą)</div>` : '';
+    const noteHtml = r.note ? `<div class="cp-note">${r.note}</div>` : '';
+    row.innerHTML = `<span class="rng">${r.rng}</span><span class="boss">${r.boss}${ivBadge}${cpHtml}${noteHtml}</span>`;
+    r5.appendChild(row);
+  });
+  
+  RAIDS_MEGA.forEach(r=>{
+    const row = document.createElement('div');
+    row.className = 'raid-week';
+    const ivBadge = r.iv ? '<span class="iv-badge">100% IV</span>' : '';
+    const cpHtml = r.iv ? `<div class="cp-line">CP na 100% IV: <b>${r.cp20}</b> (Lv.20, bez pogody) · <b>${r.cp25}</b> (Lv.25, z pogodą)</div>` : '';
+    row.innerHTML = `<span class="rng">${r.rng}</span><span class="boss">${r.boss}${ivBadge}${cpHtml}</span>`;
+    rm.appendChild(row);
+  });
+}
+
+/* ========== TYPY POKÉMON — TABELA SKUTECZNOŚCI ========== */
+const TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
+const PL_NAMES = {
+  Normal:'Normalny', Fire:'Ogień', Water:'Woda', Electric:'Elektryczny', Grass:'Trawa', Ice:'Lód',
+  Fighting:'Walczący', Poison:'Trucizna', Ground:'Ziemia', Flying:'Latający', Psychic:'Psychiczny',
+  Bug:'Robak', Rock:'Skała', Ghost:'Duch', Dragon:'Smok', Dark:'Mroczny', Steel:'Stalowy', Fairy:'Wróżka'
+};
+
+// atakujący -> {broniący się: mnożnik}; brak wpisu = 1 (neutralnie)
+const TYPE_CHART = {
+  Normal:   {Rock:0.5, Ghost:0, Steel:0.5},
+  Fire:     {Fire:0.5, Water:0.5, Grass:2, Ice:2, Bug:2, Rock:0.5, Dragon:0.5, Steel:2},
+  Water:    {Fire:2, Water:0.5, Grass:0.5, Ground:2, Rock:2, Dragon:0.5},
+  Electric: {Water:2, Electric:0.5, Grass:0.5, Ground:0, Flying:2, Dragon:0.5},
+  Grass:    {Fire:0.5, Water:2, Grass:0.5, Poison:0.5, Ground:2, Flying:0.5, Bug:0.5, Rock:2, Dragon:0.5, Steel:0.5},
+  Ice:      {Fire:0.5, Water:0.5, Grass:2, Ice:0.5, Ground:2, Flying:2, Dragon:2, Steel:0.5},
+  Fighting: {Normal:2, Ice:2, Poison:0.5, Flying:0.5, Psychic:0.5, Bug:0.5, Rock:2, Ghost:0, Dark:2, Steel:2, Fairy:0.5},
+  Poison:   {Grass:2, Poison:0.5, Ground:0.5, Rock:0.5, Ghost:0.5, Steel:0, Fairy:2},
+  Ground:   {Fire:2, Electric:2, Grass:0.5, Poison:2, Flying:0, Bug:0.5, Rock:2, Steel:2},
+  Flying:   {Electric:0.5, Grass:2, Fighting:2, Bug:2, Rock:0.5, Steel:0.5},
+  Psychic:  {Fighting:2, Poison:2, Psychic:0.5, Dark:0, Steel:0.5},
+  Bug:      {Fire:0.5, Grass:2, Fighting:0.5, Poison:0.5, Flying:0.5, Psychic:2, Ghost:0.5, Dark:2, Steel:0.5, Fairy:0.5},
+  Rock:     {Fire:2, Ice:2, Fighting:0.5, Ground:0.5, Flying:2, Bug:2, Steel:0.5},
+  Ghost:    {Normal:0, Psychic:2, Ghost:2, Dark:0.5},
+  Dragon:   {Dragon:2, Steel:0.5, Fairy:0},
+  Dark:     {Fighting:0.5, Psychic:2, Ghost:2, Dark:0.5, Fairy:0.5},
+  Steel:    {Fire:0.5, Water:0.5, Electric:0.5, Ice:2, Rock:2, Steel:0.5, Fairy:2},
+  Fairy:    {Fire:0.5, Fighting:2, Poison:0.5, Dragon:2, Dark:2, Steel:0.5}
+};
+
+function getMultiplier(atk, def){
+  const row = TYPE_CHART[atk];
+  return (row && row[def] !== undefined) ? row[def] : 1;
+}
+
+function renderTypeChart(){
+  const table = document.getElementById('typeChartTable');
+  let html = '<thead><tr><th style="writing-mode:horizontal-tb;">ATK \\ DEF</th>';
+  TYPES.forEach(t => html += `<th>${PL_NAMES[t]}</th>`);
+  html += '</tr></thead><tbody>';
+  TYPES.forEach(atk => {
+    html += `<tr><td class="row-label">${PL_NAMES[atk]}</td>`;
+    TYPES.forEach(def => {
+      const m = getMultiplier(atk, def);
+      let cls = 'tc-neu', label = '';
+      if(m === 2){ cls = 'tc-se'; label = 'S'; }
+      else if(m === 0.5){ cls = 'tc-nve'; label = 'N'; }
+      else if(m === 0){ cls = 'tc-imm'; label = '0'; }
+      html += `<td class="${cls}">${label}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function initTypeSelects(){
+  const s1 = document.getElementById('typeSelect1');
+  const s2 = document.getElementById('typeSelect2');
+  s1.innerHTML = TYPES.map(t => `<option value="${t}">${PL_NAMES[t]}</option>`).join('');
+  s2.innerHTML = '<option value="">— brak (pojedynczy typ) —</option>' + TYPES.map(t => `<option value="${t}">${PL_NAMES[t]}</option>`).join('');
+}
+
+function showCounters(){
+  const t1 = document.getElementById('typeSelect1').value;
+  const t2 = document.getElementById('typeSelect2').value;
+  const resultDiv = document.getElementById('countersResult');
+
+  const results = TYPES.map(atk => {
+    const m1 = getMultiplier(atk, t1);
+    const m2 = t2 ? getMultiplier(atk, t2) : 1;
+    return {atk, mult: m1 * m2};
+  }).filter(r => r.mult > 1).sort((a,b) => b.mult - a.mult);
+
+  if(results.length === 0){
+    resultDiv.innerHTML = '<p class="counters-empty">Brak typów super efektywnych przeciwko tej kombinacji.</p>';
+    logUserActivity('Sprawdzenie kontr: brak wyniku');
+    return;
+  }
+
+  const label = t2 ? `${PL_NAMES[t1]} / ${PL_NAMES[t2]}` : PL_NAMES[t1];
+  let html = `<p style="color:var(--muted); font-size:13px; margin-bottom:8px;">Najlepsze typy ataków przeciwko Pokémonowi typu <b style="color:var(--ink);">${label}</b>:</p><div class="counter-chips">`;
+  results.forEach(r => {
+    const cls = r.mult >= 4 ? 'x4' : 'x2';
+    const multLabel = r.mult >= 4 ? '4×' : '2×';
+    html += `<div class="counter-chip ${cls}">${PL_NAMES[r.atk]} <span style="opacity:.7;">(${multLabel})</span></div>`;
+  });
+  html += '</div>';
+  resultDiv.innerHTML = html;
+  logUserActivity('Sprawdzenie kontr: ' + label);
+}
+
+/* ========== SUPEREFEKTYWNOŚĆ — BAZA POKÉMONÓW ========== */
+// Legendarne, Mega oraz aktualni bossowie raidów 5★ wraz z ich typami
+/* Legendarne i inne Pokémony pojawiające się w zwykłych (nie-Mega) raidach —
+   dotyczy to też Pokémonów z Shadow Raidów, które traktujemy jak zwykłe raidy. */
+const POKEMON_LEGENDARY = [
+    {name:'Articuno', types:['Ice','Flying']},
+    {name:'Zapdos', types:['Electric','Flying']},
+    {name:'Moltres', types:['Fire','Flying']},
+    {name:'Mewtwo', types:['Psychic']},
+    {name:'Raikou', types:['Electric']},
+    {name:'Entei', types:['Fire']},
+    {name:'Suicune', types:['Water']},
+    {name:'Lugia', types:['Psychic','Flying']},
+    {name:'Ho-Oh', types:['Fire','Flying']},
+    {name:'Regirock', types:['Rock']},
+    {name:'Regice', types:['Ice']},
+    {name:'Registeel', types:['Steel']},
+    {name:'Latias', types:['Dragon','Psychic']},
+    {name:'Latios', types:['Dragon','Psychic']},
+    {name:'Kyogre', types:['Water']},
+    {name:'Groudon', types:['Ground']},
+    {name:'Rayquaza', types:['Dragon','Flying']},
+    {name:'Uxie', types:['Psychic']},
+    {name:'Mesprit', types:['Psychic']},
+    {name:'Azelf', types:['Psychic']},
+    {name:'Dialga', types:['Steel','Dragon']},
+    {name:'Palkia', types:['Water','Dragon']},
+    {name:'Heatran', types:['Fire','Steel']},
+    {name:'Regigigas', types:['Normal']},
+    {name:'Giratina (Forma Zwykła)', types:['Ghost','Dragon']},
+    {name:'Cresselia', types:['Psychic']},
+    {name:'Cobalion', types:['Steel','Fighting']},
+    {name:'Terrakion', types:['Rock','Fighting']},
+    {name:'Virizion', types:['Grass','Fighting']},
+    {name:'Tornadus', types:['Flying']},
+    {name:'Thundurus', types:['Electric','Flying']},
+    {name:'Landorus', types:['Ground','Flying']},
+    {name:'Reshiram', types:['Dragon','Fire']},
+    {name:'Zekrom', types:['Dragon','Electric']},
+    {name:'Kyurem', types:['Dragon','Ice']},
+    {name:'Xerneas', types:['Fairy']},
+    {name:'Yveltal', types:['Dark','Flying']},
+    {name:'Zygarde', types:['Dragon','Ground']},
+    {name:'Tapu Koko', types:['Electric','Fairy']},
+    {name:'Tapu Lele', types:['Psychic','Fairy']},
+    {name:'Tapu Bulu', types:['Grass','Fairy']},
+    {name:'Tapu Fini', types:['Water','Fairy']},
+    {name:'Solgaleo', types:['Psychic','Steel']},
+    {name:'Lunala', types:['Psychic','Ghost']},
+    {name:'Necrozma', types:['Psychic']},
+    {name:'Zacian (Forma Bohatera)', types:['Fairy']},
+    {name:'Zamazenta (Forma Bohatera)', types:['Fighting']},
+    {name:'Eternatus', types:['Poison','Dragon']},
+    {name:'Calyrex', types:['Psychic','Grass']},
+    {name:'Regieleki', types:['Electric']},
+    {name:'Regidrago', types:['Dragon']},
+];
+
+const POKEMON_MEGA = [
+    {name:'Mega Venusaur', types:['Grass','Poison']},
+    {name:'Mega Charizard X', types:['Fire','Dragon']},
+    {name:'Mega Charizard Y', types:['Fire','Flying']},
+    {name:'Mega Blastoise', types:['Water']},
+    {name:'Mega Beedrill', types:['Bug','Poison']},
+    {name:'Mega Pidgeot', types:['Normal','Flying']},
+    {name:'Mega Alakazam', types:['Psychic']},
+    {name:'Mega Slowbro', types:['Water','Psychic']},
+    {name:'Mega Gengar', types:['Ghost','Poison']},
+    {name:'Mega Kangaskhan', types:['Normal']},
+    {name:'Mega Pinsir', types:['Bug','Flying']},
+    {name:'Mega Gyarados', types:['Water','Dark']},
+    {name:'Mega Aerodactyl', types:['Rock','Flying']},
+    {name:'Mega Ampharos', types:['Electric','Dragon']},
+    {name:'Mega Steelix', types:['Steel','Ground']},
+    {name:'Mega Scizor', types:['Bug','Steel']},
+    {name:'Mega Heracross', types:['Bug','Fighting']},
+    {name:'Mega Houndoom', types:['Dark','Fire']},
+    {name:'Mega Tyranitar', types:['Rock','Dark']},
+    {name:'Mega Sceptile', types:['Grass','Dragon']},
+    {name:'Mega Blaziken', types:['Fire','Fighting']},
+    {name:'Mega Swampert', types:['Water','Ground']},
+    {name:'Mega Gardevoir', types:['Psychic','Fairy']},
+    {name:'Mega Sableye', types:['Dark','Ghost']},
+    {name:'Mega Mawile', types:['Steel','Fairy']},
+    {name:'Mega Aggron', types:['Steel']},
+    {name:'Mega Medicham', types:['Fighting','Psychic']},
+    {name:'Mega Manectric', types:['Electric']},
+    {name:'Mega Sharpedo', types:['Water','Dark']},
+    {name:'Mega Camerupt', types:['Fire','Ground']},
+    {name:'Mega Altaria', types:['Dragon','Fairy']},
+    {name:'Mega Banette', types:['Ghost']},
+    {name:'Mega Absol', types:['Dark']},
+    {name:'Mega Glalie', types:['Ice']},
+    {name:'Mega Salamence', types:['Dragon','Flying']},
+    {name:'Mega Metagross', types:['Steel','Psychic']},
+    {name:'Mega Latias', types:['Dragon','Psychic']},
+    {name:'Mega Latios', types:['Dragon','Psychic']},
+    {name:'Mega Rayquaza', types:['Dragon','Flying']},
+    {name:'Mega Lopunny', types:['Normal','Fighting']},
+    {name:'Mega Garchomp', types:['Dragon','Ground']},
+    {name:'Mega Lucario', types:['Fighting','Steel']},
+    {name:'Mega Abomasnow', types:['Grass','Ice']},
+    {name:'Mega Gallade', types:['Psychic','Fighting']},
+    {name:'Mega Audino', types:['Normal','Fairy']},
+    {name:'Mega Diancie', types:['Rock','Fairy']},
+];
+
+/* Aktualne 5★ raidy (zwykłe) — Shadow Raidy również liczymy tutaj jako zwykłe */
+const POKEMON_RAID5_ZWYKLE = [
+  {name:'Kyurem (Raid 5★)', types:['Dragon','Ice']},
+  {name:'Uxie / Mesprit / Azelf (Raid 5★)', types:['Psychic']},
+  {name:'Groudon (Raid 5★)', types:['Ground']},
+  {name:'Lunala (Raid 5★)', types:['Psychic','Ghost']},
+  {name:'Regirock (Raid 5★)', types:['Rock']},
+  {name:'Regice (Raid 5★)', types:['Ice']},
+  {name:'Registeel (Raid 5★)', types:['Steel']},
+];
+
+/* Aktualne Mega Raidy */
+const POKEMON_RAID_MEGA_AKTUALNE = [
+  {name:'Mega Aggron (Mega Raid)', types:['Steel']},
+  {name:'Mega Blaziken (Mega Raid)', types:['Fire','Fighting']},
+  {name:'Mega Garchomp (Mega Raid)', types:['Dragon','Ground']},
+];
+
+/* Struktura: kategoria główna (aktualne/ogólne) -> podkategoria (zwykle/mega) -> lista Pokémonów */
+const POKEMON_DB = {
+  aktualne: {
+    zwykle: POKEMON_RAID5_ZWYKLE,
+    mega: POKEMON_RAID_MEGA_AKTUALNE
+  },
+  ogolne: {
+    zwykle: POKEMON_LEGENDARY,
+    mega: POKEMON_MEGA
+  }
+};
+
+const SUPER_MAIN_LABELS = {aktualne:'Aktualne', ogolne:'Ogólne'};
+const SUPER_SUB_LABELS = {zwykle:'Zwykłe Raidy', mega:'Mega Raidy'};
+
+/* ========== BAZA RUCHÓW (movepool) DLA EKWIPUNKU ==========
+   Uwaga: to zestaw najważniejszych/najczęstszych ataków dla danego Pokémona
+   w Pokémon GO (na podstawie ogólnej wiedzy o grze) — nie jest to gwarantowane
+   100% aktualne movepool (Niantic czasem dodaje nowe ruchy), ale wystarcza,
+   żeby ograniczyć wybór do sensownych opcji. Jeśli Pokémona nie ma na liście,
+   pola ataków zostają zwykłymi polami tekstowymi. */
+const MOVES_DB = {
+  'Articuno': {fast:['Frost Breath','Ice Shard'], charge:['Ice Beam','Ancient Power','Hurricane','Blizzard']},
+  'Zapdos': {fast:['Thunder Shock','Charge Beam'], charge:['Thunderbolt','Zap Cannon','Ancient Power','Drill Peck']},
+  'Moltres': {fast:['Fire Spin','Wing Attack'], charge:['Fire Blast','Overheat','Ancient Power','Sky Attack']},
+  'Mewtwo': {fast:['Confusion','Psycho Cut'], charge:['Psystrike','Shadow Ball','Focus Blast','Flamethrower','Ice Beam','Thunderbolt']},
+  'Raikou': {fast:['Volt Switch','Thunder Shock'], charge:['Wild Charge','Shadow Ball','Thunder']},
+  'Entei': {fast:['Fire Fang','Fire Spin'], charge:['Overheat','Flamethrower','Iron Head','Fire Blast']},
+  'Suicune': {fast:['Snarl','Hidden Power'], charge:['Hydro Pump','Ice Beam','Bubble Beam']},
+  'Lugia': {fast:['Extrasensory','Dragon Tail'], charge:['Future Sight','Sky Attack','Aeroblast']},
+  'Ho-Oh': {fast:['Incinerate','Extrasensory'], charge:['Sacred Fire','Brave Bird','Solar Beam','Earthquake']},
+  'Regirock': {fast:['Lock On','Rock Smash'], charge:['Stone Edge','Focus Blast','Zap Cannon']},
+  'Regice': {fast:['Frost Breath','Rock Smash'], charge:['Blizzard','Focus Blast','Thunder']},
+  'Registeel': {fast:['Metal Claw','Lock On'], charge:['Flash Cannon','Focus Blast','Zap Cannon','Hyper Beam']},
+  'Latias': {fast:['Dragon Breath','Charm'], charge:['Outrage','Psychic','Thunder','Dragon Claw']},
+  'Latios': {fast:['Dragon Breath','Zen Headbutt'], charge:['Dragon Claw','Solar Beam','Psychic']},
+  'Kyogre': {fast:['Waterfall'], charge:['Hydro Pump','Blizzard','Thunder','Origin Pulse']},
+  'Groudon': {fast:['Mud Shot','Dragon Tail'], charge:['Precipice Blades','Fire Blast','Solar Beam','Earthquake']},
+  'Rayquaza': {fast:['Air Slash','Dragon Tail'], charge:['Outrage','Ancient Power','Dragon Ascent']},
+  'Uxie': {fast:['Extrasensory','Confusion'], charge:['Future Sight','Thunder','Swift']},
+  'Mesprit': {fast:['Confusion','Astonish'], charge:['Future Sight','Mirror Coat','Stone Edge']},
+  'Azelf': {fast:['Confusion','Astonish'], charge:['Future Sight','Fire Blast','Swift']},
+  'Dialga': {fast:['Dragon Breath','Metal Claw'], charge:['Iron Head','Draco Meteor','Thunder']},
+  'Palkia': {fast:['Dragon Tail','Dragon Breath'], charge:['Draco Meteor','Hydro Pump','Fire Blast']},
+  'Heatran': {fast:['Fire Spin','Bug Bite'], charge:['Magma Storm','Iron Head','Flamethrower','Stone Edge']},
+  'Regigigas': {fast:['Rock Smash','Hidden Power'], charge:['Focus Blast','Stone Edge','Thunder','Giga Impact']},
+  'Giratina (Forma Zwykła)': {fast:['Shadow Claw','Dragon Tail'], charge:['Shadow Sneak','Dragon Claw','Ancient Power','Ominous Wind']},
+  'Cresselia': {fast:['Psycho Cut','Confusion'], charge:['Moonblast','Future Sight','Grass Knot','Aurora Beam']},
+  'Cobalion': {fast:['Metal Claw','Zen Headbutt'], charge:['Sacred Sword','Close Combat','Stone Edge']},
+  'Terrakion': {fast:['Double Kick','Smack Down'], charge:['Sacred Sword','Rock Slide','Close Combat','Earthquake']},
+  'Virizion': {fast:['Quick Attack','Double Kick'], charge:['Sacred Sword','Close Combat','Leaf Blade','Stone Edge']},
+  'Tornadus': {fast:['Bite','Astonish'], charge:['Hurricane','Grass Knot','Focus Blast','Dark Pulse']},
+  'Thundurus': {fast:['Volt Switch','Astonish'], charge:['Thunder','Focus Blast','Sludge Wave','Thunderbolt']},
+  'Landorus': {fast:['Mud Shot','Rock Throw'], charge:['Earth Power','Rock Slide','Focus Blast','Bulldoze']},
+  'Reshiram': {fast:['Fire Fang','Dragon Breath'], charge:['Overheat','Draco Meteor','Crunch','Fusion Flare']},
+  'Zekrom': {fast:['Dragon Breath','Charge Beam'], charge:['Wild Charge','Outrage','Crunch','Fusion Bolt']},
+  'Kyurem': {fast:['Dragon Breath','Steel Wing'], charge:['Draco Meteor','Blizzard','Icy Wind','Glaciate']},
+  'Xerneas': {fast:['Zen Headbutt','Tackle'], charge:['Moonblast','Close Combat','Thunder']},
+  'Yveltal': {fast:['Snarl','Gust'], charge:['Hurricane','Dark Pulse','Focus Blast','Psychic']},
+  'Zygarde': {fast:['Bite','Dragon Tail'], charge:['Outrage','Bulldoze','Hyper Beam']},
+  'Tapu Koko': {fast:['Quick Attack','Volt Switch'], charge:['Dazzling Gleam','Brave Bird','Discharge']},
+  'Tapu Lele': {fast:['Astonish','Confusion'], charge:['Moonblast','Psychic','Focus Blast']},
+  'Tapu Bulu': {fast:['Rock Smash','Bullet Seed'], charge:['Grass Knot','Solar Beam','Dazzling Gleam']},
+  'Tapu Fini': {fast:['Water Gun','Hidden Power'], charge:['Moonblast','Ice Beam','Surf']},
+  'Solgaleo': {fast:['Zen Headbutt','Metal Claw'], charge:['Solar Beam','Iron Head','Sunsteel Strike']},
+  'Lunala': {fast:['Air Slash','Confusion'], charge:['Shadow Ball','Psychic','Moongeist Beam']},
+  'Necrozma': {fast:['Confusion','Charge Beam'], charge:['Moonblast','Rock Slide','Psycho Boost']},
+  'Zacian (Forma Bohatera)': {fast:['Snarl','Quick Attack'], charge:['Close Combat','Play Rough','Wild Charge','Behemoth Blade']},
+  'Zamazenta (Forma Bohatera)': {fast:['Metal Claw','Snarl'], charge:['Close Combat','Crunch','Behemoth Bash']},
+  'Eternatus': {fast:['Poison Jab','Dragon Tail'], charge:['Dynamax Cannon','Sludge Bomb','Dragon Pulse']},
+  'Calyrex': {fast:['Confusion','Zen Headbutt'], charge:['Psychic','Giga Impact','Leaf Storm']},
+  'Regieleki': {fast:['Thunder Shock','Volt Switch'], charge:['Thunder','Zap Cannon','Discharge']},
+  'Regidrago': {fast:['Dragon Breath','Dragon Tail'], charge:['Dragon Energy','Draco Meteor','Dragon Claw']},
+
+  'Mega Venusaur': {fast:['Vine Whip','Razor Leaf'], charge:['Frenzy Plant','Sludge Bomb','Petal Blizzard']},
+  'Mega Charizard X': {fast:['Dragon Breath','Fire Spin'], charge:['Blast Burn','Dragon Claw','Crunch']},
+  'Mega Charizard Y': {fast:['Fire Spin','Wing Attack'], charge:['Blast Burn','Dragon Claw','Overheat','Solar Beam']},
+  'Mega Blastoise': {fast:['Water Gun','Bite'], charge:['Hydro Cannon','Ice Beam','Skull Bash']},
+  'Mega Beedrill': {fast:['Poison Jab','Bug Bite'], charge:['X-Scissor','Sludge Bomb','Fell Stinger']},
+  'Mega Pidgeot': {fast:['Wing Attack','Steel Wing'], charge:['Brave Bird','Hurricane','Feather Dance']},
+  'Mega Alakazam': {fast:['Psycho Cut','Confusion'], charge:['Psychic','Shadow Ball','Focus Blast','Future Sight']},
+  'Mega Slowbro': {fast:['Confusion','Water Gun'], charge:['Psychic','Ice Beam','Scald']},
+  'Mega Gengar': {fast:['Shadow Claw','Lick'], charge:['Shadow Ball','Sludge Bomb','Focus Blast']},
+  'Mega Kangaskhan': {fast:['Mud Slap','Low Kick'], charge:['Power-Up Punch','Earthquake','Stomp']},
+  'Mega Pinsir': {fast:['Fury Cutter','Bug Bite'], charge:['X-Scissor','Close Combat','Vice Grip']},
+  'Mega Gyarados': {fast:['Dragon Breath','Waterfall'], charge:['Crunch','Hydro Pump','Dragon Pulse','Outrage']},
+  'Mega Aerodactyl': {fast:['Rock Throw','Bite'], charge:['Rock Slide','Ancient Power','Hyper Beam']},
+  'Mega Ampharos': {fast:['Volt Switch','Charge Beam'], charge:['Dragon Pulse','Zap Cannon','Thunder Punch']},
+  'Mega Steelix': {fast:['Dragon Tail','Thunder Fang'], charge:['Heavy Slam','Earthquake','Crunch']},
+  'Mega Scizor': {fast:['Fury Cutter','Bullet Punch'], charge:['X-Scissor','Iron Head','Night Slash']},
+  'Mega Heracross': {fast:['Counter','Struggle Bug'], charge:['Close Combat','Megahorn','Rock Blast']},
+  'Mega Houndoom': {fast:['Fire Fang','Snarl'], charge:['Flamethrower','Crunch','Foul Play']},
+  'Mega Tyranitar': {fast:['Bite','Smack Down'], charge:['Crunch','Stone Edge','Fire Blast']},
+  'Mega Sceptile': {fast:['Fury Cutter','Bullet Seed'], charge:['Frenzy Plant','Dragon Claw','Earthquake']},
+  'Mega Blaziken': {fast:['Counter','Fire Spin'], charge:['Blast Burn','Focus Blast','Stone Edge']},
+  'Mega Swampert': {fast:['Mud Shot','Water Gun'], charge:['Hydro Cannon','Earthquake','Sludge Wave']},
+  'Mega Gardevoir': {fast:['Charm','Confusion'], charge:['Dazzling Gleam','Psychic','Shadow Ball']},
+  'Mega Sableye': {fast:['Shadow Claw','Feint Attack'], charge:['Foul Play','Power Gem','Return']},
+  'Mega Mawile': {fast:['Astonish','Fire Fang'], charge:['Play Rough','Iron Head','Power-Up Punch']},
+  'Mega Aggron': {fast:['Smack Down','Dragon Tail'], charge:['Heavy Slam','Thunder','Stone Edge']},
+  'Mega Medicham': {fast:['Counter','Psycho Cut'], charge:['Dynamic Punch','Ice Punch','Power-Up Punch']},
+  'Mega Manectric': {fast:['Snarl','Charge Beam'], charge:['Wild Charge','Overheat','Flame Burst']},
+  'Mega Sharpedo': {fast:['Waterfall','Bite'], charge:['Crunch','Hydro Pump','Poison Fang']},
+  'Mega Camerupt': {fast:['Ember','Rock Smash'], charge:['Earth Power','Solar Beam','Overheat']},
+  'Mega Altaria': {fast:['Dragon Breath','Peck'], charge:['Sky Attack','Moonblast','Dragon Pulse']},
+  'Mega Banette': {fast:['Hex','Shadow Claw'], charge:['Shadow Ball','Thunder','Dazzling Gleam']},
+  'Mega Absol': {fast:['Snarl','Psycho Cut'], charge:['Dark Pulse','Megahorn','Thunder']},
+  'Mega Glalie': {fast:['Frost Breath','Ice Shard'], charge:['Avalanche','Gyro Ball','Body Slam']},
+  'Mega Salamence': {fast:['Dragon Tail','Fire Fang'], charge:['Draco Meteor','Hydro Pump','Fire Blast']},
+  'Mega Metagross': {fast:['Bullet Punch','Zen Headbutt'], charge:['Meteor Mash','Earthquake','Psychic']},
+  'Mega Latias': {fast:['Dragon Breath','Charm'], charge:['Mist Ball','Outrage','Psychic']},
+  'Mega Latios': {fast:['Dragon Breath','Zen Headbutt'], charge:['Luster Purge','Dragon Claw','Solar Beam']},
+  'Mega Rayquaza': {fast:['Air Slash','Dragon Tail'], charge:['Dragon Ascent','Outrage','Ancient Power']},
+  'Mega Lopunny': {fast:['Double Kick','Low Kick'], charge:['Focus Blast','Fire Punch','Hyper Beam']},
+  'Mega Garchomp': {fast:['Mud Shot','Dragon Tail'], charge:['Earth Power','Outrage','Sand Tomb']},
+  'Mega Lucario': {fast:['Counter','Bullet Punch'], charge:['Aura Sphere','Close Combat','Flash Cannon']},
+  'Mega Abomasnow': {fast:['Powder Snow','Razor Leaf'], charge:['Weather Ball','Energy Ball','Blizzard']},
+  'Mega Gallade': {fast:['Confusion','Low Kick'], charge:['Close Combat','Leaf Blade','Synchronoise']},
+  'Mega Audino': {fast:['Zen Headbutt','Pound'], charge:['Dazzling Gleam','Psychic','Disarming Voice']},
+  'Mega Diancie': {fast:['Rock Throw','Tackle'], charge:['Moonblast','Diamond Storm','Power Gem']},
+};
+
+const BASE_STATS = {
+  'Articuno': {atk:192, def:236, sta:207},
+  'Azelf': {atk:270, def:151, sta:181},
+  'Calyrex': {atk:162, def:162, sta:225},
+  'Cobalion': {atk:192, def:229, sta:209},
+  'Cresselia': {atk:152, def:258, sta:260},
+  'Dialga': {atk:275, def:211, sta:205},
+  'Entei': {atk:235, def:171, sta:251},
+  'Eternatus': {atk:278, def:192, sta:268},
+  'Giratina (Forma Zwykła)': {atk:187, def:225, sta:284},
+  'Groudon': {atk:270, def:228, sta:205},
+  'Heatran': {atk:251, def:213, sta:209},
+  'Ho-Oh': {atk:239, def:244, sta:214},
+  'Kyogre': {atk:270, def:228, sta:205},
+  'Kyurem': {atk:246, def:170, sta:245},
+  'Landorus': {atk:261, def:182, sta:205},
+  'Latias': {atk:228, def:246, sta:190},
+  'Latios': {atk:268, def:212, sta:190},
+  'Lugia': {atk:193, def:310, sta:235},
+  'Lunala': {atk:255, def:191, sta:264},
+  'Mega Abomasnow': {atk:240, def:191, sta:207},
+  'Mega Absol': {atk:314, def:130, sta:163},
+  'Mega Aerodactyl': {atk:292, def:210, sta:190},
+  'Mega Aggron': {atk:247, def:331, sta:172},
+  'Mega Alakazam': {atk:367, def:207, sta:146},
+  'Mega Altaria': {atk:222, def:218, sta:181},
+  'Mega Ampharos': {atk:294, def:203, sta:207},
+  'Mega Audino': {atk:147, def:239, sta:230},
+  'Mega Banette': {atk:312, def:160, sta:162},
+  'Mega Beedrill': {atk:303, def:148, sta:163},
+  'Mega Blastoise': {atk:264, def:237, sta:188},
+  'Mega Blaziken': {atk:329, def:168, sta:190},
+  'Mega Camerupt': {atk:253, def:183, sta:172},
+  'Mega Charizard X': {atk:273, def:213, sta:186},
+  'Mega Charizard Y': {atk:319, def:212, sta:186},
+  'Mega Diancie': {atk:342, def:235, sta:137},
+  'Mega Gallade': {atk:326, def:230, sta:169},
+  'Mega Garchomp': {atk:339, def:222, sta:239},
+  'Mega Gardevoir': {atk:326, def:229, sta:169},
+  'Mega Gengar': {atk:349, def:199, sta:155},
+  'Mega Glalie': {atk:252, def:168, sta:190},
+  'Mega Gyarados': {atk:292, def:247, sta:216},
+  'Mega Heracross': {atk:334, def:223, sta:190},
+  'Mega Houndoom': {atk:289, def:194, sta:181},
+  'Mega Kangaskhan': {atk:246, def:210, sta:233},
+  'Mega Latias': {atk:289, def:297, sta:190},
+  'Mega Latios': {atk:335, def:241, sta:190},
+  'Mega Lopunny': {atk:282, def:214, sta:163},
+  'Mega Lucario': {atk:310, def:175, sta:172},
+  'Mega Manectric': {atk:286, def:179, sta:172},
+  'Mega Mawile': {atk:188, def:217, sta:137},
+  'Mega Medicham': {atk:205, def:179, sta:155},
+  'Mega Metagross': {atk:300, def:289, sta:190},
+  'Mega Pidgeot': {atk:280, def:175, sta:195},
+  'Mega Pinsir': {atk:305, def:231, sta:163},
+  'Mega Rayquaza': {atk:377, def:210, sta:227},
+  'Mega Sableye': {atk:151, def:216, sta:137},
+  'Mega Salamence': {atk:310, def:251, sta:216},
+  'Mega Sceptile': {atk:320, def:186, sta:172},
+  'Mega Scizor': {atk:279, def:250, sta:172},
+  'Mega Sharpedo': {atk:289, def:144, sta:172},
+  'Mega Slowbro': {atk:224, def:259, sta:216},
+  'Mega Steelix': {atk:212, def:327, sta:181},
+  'Mega Swampert': {atk:283, def:218, sta:225},
+  'Mega Tyranitar': {atk:309, def:276, sta:225},
+  'Mega Venusaur': {atk:241, def:246, sta:190},
+  'Mesprit': {atk:212, def:212, sta:190},
+  'Mewtwo': {atk:300, def:182, sta:214},
+  'Moltres': {atk:251, def:181, sta:207},
+  'Necrozma': {atk:251, def:195, sta:219},
+  'Palkia': {atk:280, def:215, sta:189},
+  'Raikou': {atk:241, def:195, sta:207},
+  'Rayquaza': {atk:284, def:170, sta:213},
+  'Regice': {atk:179, def:309, sta:190},
+  'Regidrago': {atk:202, def:101, sta:400},
+  'Regieleki': {atk:250, def:125, sta:190},
+  'Regigigas': {atk:287, def:210, sta:221},
+  'Regirock': {atk:179, def:309, sta:190},
+  'Registeel': {atk:143, def:285, sta:190},
+  'Reshiram': {atk:275, def:211, sta:205},
+  'Solgaleo': {atk:255, def:191, sta:264},
+  'Suicune': {atk:180, def:235, sta:225},
+  'Tapu Bulu': {atk:249, def:215, sta:172},
+  'Tapu Fini': {atk:189, def:254, sta:172},
+  'Tapu Koko': {atk:250, def:181, sta:172},
+  'Tapu Lele': {atk:259, def:208, sta:172},
+  'Terrakion': {atk:260, def:192, sta:209},
+  'Thundurus': {atk:266, def:164, sta:188},
+  'Tornadus': {atk:266, def:164, sta:188},
+  'Uxie': {atk:156, def:270, sta:181},
+  'Virizion': {atk:192, def:229, sta:209},
+  'Xerneas': {atk:250, def:185, sta:246},
+  'Yveltal': {atk:250, def:185, sta:246},
+  'Zacian (Forma Bohatera)': {atk:254, def:236, sta:192},
+  'Zamazenta (Forma Bohatera)': {atk:254, def:236, sta:192},
+  'Zapdos': {atk:253, def:185, sta:207},
+  'Zekrom': {atk:275, def:211, sta:205},
+  'Zygarde': {atk:203, def:232, sta:239},
+};
+
+const CPM_TABLE = {
+  1: 0.09400000,
+  1.5: 0.13019894,
+  2: 0.16639787,
+  2.5: 0.19106517,
+  3: 0.21573247,
+  3.5: 0.23572626,
+  4: 0.25572005,
+  4.5: 0.27298497,
+  5: 0.29024988,
+  5.5: 0.30566874,
+  6: 0.32108760,
+  6.5: 0.33515014,
+  7: 0.34921268,
+  7.5: 0.36222414,
+  8: 0.37523560,
+  8.5: 0.38740144,
+  9: 0.39956728,
+  9.5: 0.41103364,
+  10: 0.42250000,
+  10.5: 0.43280378,
+  11: 0.44310755,
+  11.5: 0.45295297,
+  12: 0.46279840,
+  12.5: 0.47224168,
+  13: 0.48168495,
+  13.5: 0.49077170,
+  14: 0.49985844,
+  14.5: 0.50862619,
+  15: 0.51739395,
+  15.5: 0.52587412,
+  16: 0.53435430,
+  16.5: 0.54257350,
+  17: 0.55079270,
+  17.5: 0.55877360,
+  18: 0.56675450,
+  18.5: 0.57451670,
+  19: 0.58227890,
+  19.5: 0.58983945,
+  20: 0.59740000,
+  20.5: 0.60477865,
+  21: 0.61215730,
+  21.5: 0.61936220,
+  22: 0.62656710,
+  22.5: 0.63361003,
+  23: 0.64065295,
+  23.5: 0.64754429,
+  24: 0.65443563,
+  24.5: 0.66118482,
+  25: 0.66793400,
+  25.5: 0.67454945,
+  26: 0.68116490,
+  26.5: 0.68765427,
+  27: 0.69414365,
+  27.5: 0.70051392,
+  28: 0.70688420,
+  28.5: 0.71314165,
+  29: 0.71939910,
+  29.5: 0.72554955,
+  30: 0.73170000,
+  30.5: 0.73473475,
+  31: 0.73776950,
+  31.5: 0.74077946,
+  32: 0.74378943,
+  32.5: 0.74677523,
+  33: 0.74976104,
+  33.5: 0.75272327,
+  34: 0.75568550,
+  34.5: 0.75862467,
+  35: 0.76156384,
+  35.5: 0.76448050,
+  36: 0.76739717,
+  36.5: 0.77029183,
+  37: 0.77318650,
+  37.5: 0.77605963,
+  38: 0.77893275,
+  38.5: 0.78178488,
+  39: 0.78463700,
+  39.5: 0.78746850,
+  40: 0.79030000,
+  40.5: 0.79280000,
+  41: 0.79530000,
+  41.5: 0.79780000,
+  42: 0.80030000,
+  42.5: 0.80280000,
+  43: 0.80530000,
+  43.5: 0.80780000,
+  44: 0.81030000,
+  44.5: 0.81280000,
+  45: 0.81530000,
+  45.5: 0.81780000,
+  46: 0.82030000,
+  46.5: 0.82280000,
+  47: 0.82530000,
+  47.5: 0.82780000,
+  48: 0.83030000,
+  48.5: 0.83280000,
+  49: 0.83530000,
+  49.5: 0.83780000,
+  50: 0.84030000,
+  50.5: 0.84280000,
+  51: 0.84530000,
+};
+
+/* ================== AUTOMATYCZNE WYLICZANIE POZIOMU I HP ==================
+   Poziom Pokémona (a co za tym idzie też jego HP) da się jednoznacznie
+   wyliczyć na podstawie: gatunku (statystyki bazowe Atak/Obrona/Wytrzymałość),
+   IV (0-15) oraz aktualnego CP — dokładnie tak samo, jak robi to gra od
+   drugiej strony (CP = f(poziom, IV, staty bazowe)). Dlatego pole "Poziom"
+   nie musi być wpisywane ręcznie: sprawdzamy po kolei wszystkie możliwe
+   poziomy (1–51, co pół poziomu) i szukamy tego, który dla podanych IV
+   i statystyk bazowych daje dokładnie takie CP, jakie wpisał użytkownik.
+   Z tego samego poziomu (i CPM) liczymy też HP — więc drugie pole też
+   znika z ręcznego wpisywania. Jedyny przypadek, gdy to zawodzi, to gdy
+   dwa sąsiednie pół-poziomy zaokrąglają się (Math.floor) do tego samego CP
+   — wtedy pokazujemy obie możliwości do wyboru. */
+
+function resolveBaseStatsName(rawName){
+  const clean = (rawName || '').replace(/\s*\((Raid 5★|Mega Raid)\)\s*$/i, '').trim();
+  const key = Object.keys(BASE_STATS).find(k => k.toLowerCase() === clean.toLowerCase());
+  return key || null;
+}
+
+function computeLevelCandidates(baseName, form, cp, ivAtk, ivDef, ivSta){
+  const base = BASE_STATS[baseName];
+  if(!base || !cp || ivAtk === null || ivDef === null || ivSta === null) return [];
+
+  let atk = base.atk, def = base.def;
+  if(form === 'shadow'){
+    atk = atk * 1.2;
+    def = def * 0.8333333;
+  }
+  const atkTotal = atk + ivAtk;
+  const defTotal = Math.sqrt(def + ivDef);
+  const staTotal = Math.sqrt(base.sta + ivSta);
+
+  const matches = [];
+  for(let lvl = 1; lvl <= 51; lvl += 0.5){
+    const cpm = CPM_TABLE[lvl];
+    const calcCp = Math.floor((atkTotal * defTotal * staTotal * cpm * cpm) / 10);
+    if(calcCp === Number(cp)){
+      const hp = Math.max(10, Math.floor((base.sta + ivSta) * cpm));
+      matches.push({level: lvl, hp: hp});
+    }
+  }
+  return matches;
+}
+
+function recalcEqLevel(){
+  const rawName = document.getElementById('eqName').value;
+  const form = document.getElementById('eqFormSelect').value;
+  const cp = document.getElementById('eqCP').value;
+  const ivAtk = clampIv(document.getElementById('eqIvAtk').value);
+  const ivDef = clampIv(document.getElementById('eqIvDef').value);
+  const ivSta = clampIv(document.getElementById('eqIvSta').value);
+
+  const box = document.getElementById('eqLevelAuto');
+  const manualWrap = document.getElementById('eqLevelManualWrap');
+  const baseName = resolveBaseStatsName(rawName);
+
+  if(!baseName){
+    // Nieznany / niewspierany gatunek — brak danych bazowych, wracamy do ręcznego wyboru poziomu.
+    box.className = 'eq-level-auto';
+    box.innerHTML = rawName
+      ? 'Ten gatunek nie jest jeszcze w bazie statystyk — wybierz poziom ręcznie.'
+      : 'Podaj CP oraz IV rozpoznanego Pokémona, żeby wyliczyć poziom automatycznie.';
+    manualWrap.style.display = rawName ? 'block' : 'none';
+    if(rawName) populateManualLevelSelect();
+    return;
+  }
+
+  if(!cp || ivAtk === null || ivDef === null || ivSta === null){
+    box.className = 'eq-level-auto';
+    box.innerHTML = 'Uzupełnij CP oraz wszystkie trzy IV, żeby wyliczyć poziom i HP automatycznie.';
+    manualWrap.style.display = 'none';
+    document.getElementById('eqLevel').value = document.getElementById('eqLevel').value || '20';
+    return;
+  }
+
+  const matches = computeLevelCandidates(baseName, form, cp, ivAtk, ivDef, ivSta);
+
+  if(matches.length === 1){
+    const m = matches[0];
+    document.getElementById('eqLevel').value = m.level;
+    document.getElementById('eqHP').value = m.hp;
+    box.className = 'eq-level-auto ok';
+    box.innerHTML = `Poziom <b>${m.level}</b> · <b>${m.hp} HP</b> (wyliczone z CP i IV)`;
+    manualWrap.style.display = 'none';
+  } else if(matches.length > 1){
+    // Rzadki przypadek: dwa sąsiednie pół-poziomy dają to samo (zaokrąglone w dół) CP.
+    document.getElementById('eqLevel').value = matches[0].level;
+    document.getElementById('eqHP').value = matches[0].hp;
+    box.className = 'eq-level-auto warn';
+    box.innerHTML = 'Przy tym CP i IV pasuje więcej niż jeden poziom — wybierz właściwy (podpowie prawdziwe HP z gry):<br>' +
+      matches.map((m,i) => `<span class="eq-level-chip${i===0?' active':''}" onclick="pickEqLevelCandidate(${m.level},${m.hp},this)">Poz. ${m.level} · ${m.hp} HP</span>`).join('');
+    manualWrap.style.display = 'none';
+  } else {
+    box.className = 'eq-level-auto warn';
+    box.innerHTML = 'Podane CP nie pasuje do żadnego poziomu przy tych IV dla tego gatunku — sprawdź dane, albo wybierz poziom ręcznie.';
+    manualWrap.style.display = 'block';
+    populateManualLevelSelect();
+  }
+}
+
+function pickEqLevelCandidate(level, hp, el){
+  document.getElementById('eqLevel').value = level;
+  document.getElementById('eqHP').value = hp;
+  el.parentElement.querySelectorAll('.eq-level-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function populateManualLevelSelect(){
+  const sel = document.getElementById('eqLevelManual');
+  if(sel.options.length === 0){
+    let html = '';
+    for(let lvl = 1; lvl <= 51; lvl += 0.5){
+      html += `<option value="${lvl}">${lvl}</option>`;
+    }
+    sel.innerHTML = html;
+  }
+  sel.value = document.getElementById('eqLevel').value || '20';
+}
+
+function onEqLevelManualChange(){
+  document.getElementById('eqLevel').value = document.getElementById('eqLevelManual').value;
+  document.getElementById('eqHP').value = '';
+}
+
+
+/* Lista wszystkich znanych nazw Pokémonów (do podpowiedzi w polu "Nazwa") —
+   budowana automatycznie z POKEMON_DB, bez dopisków typu "(Raid 5★)". */
+function getAllKnownPokemonNames(){
+  const names = new Set();
+  Object.values(POKEMON_DB).forEach(mainCat => {
+    Object.values(mainCat).forEach(list => {
+      list.forEach(p => {
+        const clean = p.name.replace(/\s*\((Raid 5★|Mega Raid)\)\s*$/i, '').trim();
+        names.add(clean);
+      });
+    });
+  });
+  return Array.from(names).sort((a,b) => a.localeCompare(b, 'pl'));
+}
+
+function initEqAutocomplete(){
+  const datalist = document.getElementById('eqPokemonDatalist');
+  if(!datalist) return;
+  datalist.innerHTML = getAllKnownPokemonNames().map(n => `<option value="${n}"></option>`).join('');
+}
+
+// Dopasowuje wpisaną nazwę do znanego gatunku w MOVES_DB (dokładne dopasowanie, bez rozróżniania wielkości liter)
+function resolveKnownSpecies(rawName){
+  const clean = (rawName || '').replace(/\s*\((Raid 5★|Mega Raid)\)\s*$/i, '').trim();
+  const key = Object.keys(MOVES_DB).find(k => k.toLowerCase() === clean.toLowerCase());
+  return key || null;
+}
+
+function onEqNameChange(){
+  const rawName = document.getElementById('eqName').value;
+  const species = resolveKnownSpecies(rawName);
+  const hint = document.getElementById('eqNameHint');
+
+  const fastInput = document.getElementById('eqFastMove');
+  const fastSelect = document.getElementById('eqFastMoveSelect');
+  const chargeInput = document.getElementById('eqChargeMove');
+  const chargeSelect = document.getElementById('eqChargeMoveSelect');
+  const charge2Input = document.getElementById('eqChargeMove2');
+  const charge2Select = document.getElementById('eqChargeMove2Select');
+
+  if(species){
+    const moves = MOVES_DB[species];
+    hint.textContent = `✓ Rozpoznano: ${species} — ataki poniżej ograniczone do jego movepoolu.`;
+    hint.style.color = 'var(--win)';
+
+    fillMoveSelect(fastSelect, moves.fast, fastInput.value);
+    fillMoveSelect(chargeSelect, moves.charge, chargeInput.value);
+    fillMoveSelect(charge2Select, ['— brak —', ...moves.charge], charge2Input.value);
+
+    fastInput.style.display = 'none'; fastSelect.style.display = 'block';
+    chargeInput.style.display = 'none'; chargeSelect.style.display = 'block';
+    charge2Input.style.display = 'none'; charge2Select.style.display = 'block';
+
+    fastInput.value = fastSelect.value;
+    chargeInput.value = chargeSelect.value;
+    charge2Input.value = charge2Select.value === '— brak —' ? '' : charge2Select.value;
+  } else {
+    hint.textContent = rawName ? 'Nieznany gatunek — ataki wpisz ręcznie.' : '';
+    hint.style.color = 'var(--muted)';
+
+    fastInput.style.display = 'block'; fastSelect.style.display = 'none';
+    chargeInput.style.display = 'block'; chargeSelect.style.display = 'none';
+    charge2Input.style.display = 'block'; charge2Select.style.display = 'none';
+  }
+}
+
+function fillMoveSelect(selectEl, options, currentValue){
+  selectEl.innerHTML = options.map(m => `<option value="${m}">${m}</option>`).join('');
+  if(currentValue && options.includes(currentValue)){
+    selectEl.value = currentValue;
+  }
+}
+
+function initSuperSelect(){
+  Object.keys(POKEMON_DB).forEach(main => {
+    Object.keys(POKEMON_DB[main]).forEach(sub => {
+      const sel = document.getElementById(`superSelect-${main}-${sub}`);
+      let html = '<option value="">— wybierz Pokémona —</option>';
+      POKEMON_DB[main][sub].forEach((p, i) => {
+        html += `<option value="${i}">${p.name}</option>`;
+      });
+      sel.innerHTML = html;
+    });
+  });
+}
+
+function showSuperMainTab(main){
+  document.querySelectorAll('#page-super .super-main-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('#page-super > .card > .admin-tabs > .admin-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('superMain-' + main).classList.add('active');
+  document.getElementById(main === 'aktualne' ? 'superMainBtnAktualne' : 'superMainBtnOgolne').classList.add('active');
+}
+
+function showSuperSubTab(main, sub){
+  const container = document.getElementById('superMain-' + main);
+  container.querySelectorAll('.admin-content').forEach(el => el.classList.remove('active'));
+  container.querySelectorAll('.admin-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`superSub-${main}-${sub}`).classList.add('active');
+  const btnId = 'superSubBtn' + main.charAt(0).toUpperCase() + main.slice(1) + sub.charAt(0).toUpperCase() + sub.slice(1);
+  document.getElementById(btnId).classList.add('active');
+}
+
+function showSuperEffective(main, sub){
+  const selId = `superSelect-${main}-${sub}`;
+  const resultId = `superResult-${main}-${sub}`;
+  const val = document.getElementById(selId).value;
+  const resultDiv = document.getElementById(resultId);
+  if(val === ''){
+    resultDiv.innerHTML = '<p class="counters-empty">Wybierz Pokémona z listy powyżej, żeby zobaczyć jego typy i kontry.</p>';
+    return;
+  }
+  const poke = POKEMON_DB[main][sub][Number(val)];
+
+  const typesHtml = poke.types.map(t => `<span class="own-type-chip">${PL_NAMES[t]}</span>`).join('');
+
+  const results = TYPES.map(atk => {
+    const mult = poke.types.reduce((acc, def) => acc * getMultiplier(atk, def), 1);
+    return {atk, mult};
+  }).filter(r => r.mult > 1).sort((a,b) => b.mult - a.mult);
+
+  let chipsHtml;
+  if(results.length === 0){
+    chipsHtml = '<p class="counters-empty">Brak typów super efektywnych przeciwko temu Pokémonowi.</p>';
+  } else {
+    chipsHtml = '<div class="counter-chips">' + results.map(r => {
+      const cls = r.mult >= 4 ? 'x4' : 'x2';
+      const multLabel = r.mult >= 4 ? '4×' : '2×';
+      return `<div class="counter-chip ${cls}">${PL_NAMES[r.atk]} <span style="opacity:.7;">(${multLabel})</span></div>`;
+    }).join('') + '</div>';
+  }
+
+  resultDiv.innerHTML = `
+    <p style="color:var(--muted); font-size:13px; margin-bottom:6px;">Typ(y) Pokémona <b style="color:var(--ink);">${poke.name}</b>:</p>
+    <div class="super-types-row">${typesHtml}</div>
+    <p style="color:var(--muted); font-size:13px; margin-bottom:8px;">Typy ataków super efektywne przeciwko niemu:</p>
+    ${chipsHtml}
+  `;
+  logUserActivity(`Superefektywność (${SUPER_MAIN_LABELS[main]} / ${SUPER_SUB_LABELS[sub]}): ` + poke.name);
+}
+
+/* ========== OBSŁUGA OBSŁUGI PWA I DODAWANIA DO EKRANU GŁÓWNEGO ========== */
+let deferredPrompt;
+const pwaBanner = document.getElementById('pwaBanner');
+const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+const pwaBannerDesc = document.getElementById('pwaBannerDesc');
+
+// Wykrywanie urządzenia i statusu instalacji
+const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  if(!isStandalone && localStorage.getItem('pwaPromptChoice') !== 'dismissed') {
+    setTimeout(() => {
+      pwaBanner.classList.add('show');
+    }, 2000);
+  }
+});
+
+// Instrukcja dla iOS jeśli przeglądarka to Safari
+if (isIos && !isStandalone && localStorage.getItem('pwaPromptChoice') !== 'dismissed') {
+  setTimeout(() => {
+    pwaBannerDesc.innerHTML = 'Aby dodać skrót na iOS: kliknij przycisk <b>Udostępnij</b> (ikona z strzałką) w przeglądarce, a następnie wybierz <b>"Dodaj do ekranu początkowego"</b>.';
+    pwaInstallBtn.style.display = 'none';
+    pwaBanner.classList.add('show');
+  }, 2500);
+}
+
+function installPwa() {
+  if (!deferredPrompt) return;
+  pwaBanner.classList.remove('show');
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') {
+      logUserActivity('PWA: Zainstalowano aplikację');
+      localStorage.setItem('pwaPromptChoice', 'accepted');
+    } else {
+      logUserActivity('PWA: Odrzucono instalację');
+    }
+    deferredPrompt = null;
+  });
+}
+
+function dismissPwaPrompt() {
+  pwaBanner.classList.remove('show');
+  localStorage.setItem('pwaPromptChoice', 'dismissed');
+  logUserActivity('PWA: Zamknięto baner pobierania');
+}
+
+// Inicjalizacja
+renderEvents();
+renderRaids();
+renderTypeChart();
+initTypeSelects();
+initSuperSelect();
+initEqAutocomplete();
+initializeLogs();
+updateBackupSourceStatus();
+</script>
+</body>
+</html>
